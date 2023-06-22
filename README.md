@@ -97,7 +97,7 @@ ansible-playbook -l lumos service/pihole/playbook.yml
 ![Plausible Analytics Uptime](https://kuma.tomy.me/api/badge/8/uptime/24)
 
 ```
-ansible-playbook -l pquill service/plausible-analytics.yml --extra-vars "network=caddy"
+ansible-playbook -l pquill service/plausible-analytics/playbook.yml --extra-vars "docker_network=caddy domain=a.tomy.me"
 ```
 
 ### [Uptime Kuma](https://kuma.tomy.me)
