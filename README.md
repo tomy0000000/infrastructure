@@ -7,6 +7,7 @@
   - [K Backend](#k-backend)
   - [NocoDB](#nocodb)
   - [PiHole](#pihole)
+  - [Wireguard](#wireguard)
 - [🇯🇵 Mailcow](#-mailcow)
   - [Mailcow](#mailcow)
 - [🇯🇵 Tubee](#-tubee)
@@ -73,6 +74,15 @@ ansible-playbook -l lumos service/nocodb/playbook.yml
 
 ```
 ansible-playbook -l lumos service/pihole/playbook.yml
+```
+
+### [Wireguard](https://wg.tomy.me)
+
+![Wireguard Status](https://kuma.tomy.me/api/badge/22/status)
+![Wireguard Uptime](https://kuma.tomy.me/api/badge/22/uptime/24)
+
+```
+ansible-playbook -l lumos service/wireguard/playbook.yml
 ```
 
 ## 🇯🇵 Mailcow
