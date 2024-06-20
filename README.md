@@ -1,20 +1,6 @@
 # Infrastructure
 
-- [🇹🇼 Lumos](#-lumos)
-  - [Nginx Proxy Manager](#nginx-proxy-manager)
-  - [Portainer](#portainer)
-  - [1Password Connect](#1password-connect)
-  - [K Backend](#k-backend)
-  - [NocoDB](#nocodb)
-  - [PiHole](#pihole)
-  - [Wireguard](#wireguard)
-- [🇯🇵 Mailcow](#-mailcow)
-  - [Mailcow](#mailcow)
-- [🇯🇵 Tubee](#-tubee)
-  - [Tubee](#tubee)
-- [🇸🇬 PQuill](#-pquill)
-  - [Plausible Analytics](#plausible-analytics)
-  - [Uptime Kuma](#uptime-kuma)
+My infrastructure at a glance.
 
 ## 🇹🇼 Lumos
 
