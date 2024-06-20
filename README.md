@@ -110,6 +110,16 @@ ansible-playbook -l lumos service/wireguard/playbook.yml
 ansible-playbook -l pquill service/plausible-analytics/playbook.yml --extra-vars "docker_network=caddy domain=a.tomy.me"
 ```
 
+### [Remark42](https://remark42.tomy.me)
+
+![Remark42 Status](https://kuma.tomy.me/api/badge/23/status)
+![Remark42 Uptime](https://kuma.tomy.me/api/badge/23/uptime/24)
+
+```
+ansible-playbook -l pquill service/remark42/playbook.yml --extra-vars "docker_network=caddy domain=remark42.tomy.me"
+```
+
+
 ### [Uptime Kuma](https://kuma.tomy.me)
 
 ```
