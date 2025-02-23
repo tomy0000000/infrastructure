@@ -35,15 +35,6 @@ ansible-playbook -l linode_tokyo2,digitalocean_sgp1 service/portainer-agent/play
 ansible-playbook -l lumos service/1password-connect/playbook.yml
 ```
 
-### [K Backend](https://k.tomy.me)
-
-![K Backend Status](https://kuma.tomy.me/api/badge/7/status)
-![K Backend Uptime](https://kuma.tomy.me/api/badge/7/uptime/24)
-
-```
-ansible-playbook -l lumos service/k-backend/playbook.yml
-```
-
 ### [NocoDB](https://nocodb.tomy.me)
 
 ![NocoDB Status](https://kuma.tomy.me/api/badge/19/status)
