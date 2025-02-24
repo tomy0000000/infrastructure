@@ -1,4 +1,4 @@
-# [K Backend](https://k.tomy.me)
+# [K Backend](https://k-api.tomy.me)
 
 ![K Backend Status](https://kuma.tomy.me/api/badge/7/status)
 ![K Backend Uptime](https://kuma.tomy.me/api/badge/7/uptime/24)
