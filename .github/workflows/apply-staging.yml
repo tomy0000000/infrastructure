@@ -52,7 +52,8 @@ jobs:
         run: terraform validate
 
       - name: "📥 Import Existing Buckets"
-        run: ../scripts/import-resources.sh
+        working-directory: "."
+        run: ./scripts/import-resources.sh
 
       - name: "📋 Terraform Plan"
         run: terraform plan -input=false -out=tfplan
@@ -72,8 +73,6 @@ jobs:
     needs: plan
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    # The environment carries a 24h wait timer (configured in repo settings):
-    # the job sits in "Waiting" for 24h, and cancelling the run aborts the apply.
     environment: "Staging"
     defaults:
       run:
