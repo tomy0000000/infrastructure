@@ -1,15 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 #MISE description="Import existing resources into Terraform state"
-#MISE dir="staging"
+
+ENVS=(staging production)
 
 # Load provider credentials. In CI they come from the runner's secrets; when
 # running locally, source them from instance/<env>.env (gitignored).
 load_env() {
+  local env="$1"
   if [[ -z "${CI:-}" ]]; then
-    local env_file="../instance/${MISE_ENV:-staging}.env"
+    local env_file="instance/${env}.env"
     if [[ ! -f "$env_file" ]]; then
-      echo "Env file not found: $env_file" >&2
+      echo "$env: env file not found: $env_file" >&2
       exit 1
     fi
     set -a
@@ -23,24 +25,26 @@ load_env() {
 }
 
 import_buckets() {
-  local existing key name
-  existing=$(curl -sf \
-    -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-    "https://api.cloudflare.com/client/v4/accounts/$TF_VAR_cloudflare_account_id/r2/buckets" \
-    | jq -r '.result.buckets[]?.name')
-  echo "Existing buckets in account:"
-  echo "$existing"
-
+  local env="$1"
+  local key name out
   while read -r key name; do
-    if echo "$existing" | grep -qx "$name"; then
-      terraform import -input=false \
+    # Capture terraform's output so a clean import stays quiet; show it on failure.
+    if out=$(terraform -chdir="$env" import -input=false \
         "module.r2_${key}.cloudflare_r2_bucket.this" \
-        "${TF_VAR_cloudflare_account_id}/${name}/default"
+        "${TF_VAR_cloudflare_account_id}/${name}/default" 2>&1); then
+      echo "$env: imported ${name}"
     else
-      echo "Bucket ${name} does not exist yet, plan will create it"
+      echo "$env: import of ${name} failed, assuming absent, plan will create it"
+      echo "$out" >&2
     fi
-  done < <(yq -r '.buckets | to_entries | .[] | .key + " " + .value.name' config.yaml)
+  done < <(yq -r '.buckets | to_entries | .[] | .key + " " + .value.name' "$env/config.yaml")
 }
 
-load_env
-import_buckets
+for env in "${ENVS[@]}"; do
+  if [[ ! -f "$env/config.yaml" ]]; then
+    echo "$env: no config.yaml, skipping"
+    continue
+  fi
+  load_env "$env"
+  import_buckets "$env"
+done
