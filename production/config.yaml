@@ -1,0 +1,9 @@
+# R2 buckets
+# location is an optional hint: WNAM, ENAM, WEUR, EEUR, APAC, OC
+buckets:
+  img:
+    name: tomy-img
+    location: APAC
+  misc:
+    name: tomy-misc
+    location: APAC
