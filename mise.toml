@@ -1,2 +1,6 @@
 [tools]
+"ubi:mikefarah/yq" = { version = "latest", exe = "yq" }
 terraform = "1.15.8"
+
+[task_config]
+includes = ["scripts"]

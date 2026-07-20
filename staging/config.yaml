@@ -1,0 +1,12 @@
+# Environment config, single source of truth for main.tf and CI
+# (apply-staging.yml). Data only: resource logic belongs in *.tf files.
+
+# R2 buckets. Key "foo" must match a module named "r2_foo" in main.tf.
+# location is an optional hint: WNAM, ENAM, WEUR, EEUR, APAC, OC
+buckets:
+  img:
+    name: tomy-img-staging
+    location: APAC
+  misc:
+    name: tomy-misc-staging
+    location: APAC
