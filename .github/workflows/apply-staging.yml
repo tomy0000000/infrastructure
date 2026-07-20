@@ -21,7 +21,7 @@ permissions:
 
 env:
   CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-  TF_VAR_cloudflare_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  TF_VAR_cloudflare_account_id: ${{ secrets.TF_VAR_CLOUDFLARE_ACCOUNT_ID }}
   TF_IN_AUTOMATION: "true"
   # Lets mise query the GitHub releases API without anonymous rate limits
   GITHUB_TOKEN: ${{ github.token }}
@@ -30,6 +30,7 @@ jobs:
   plan:
     name: "🏗 Terraform Plan"
     runs-on: ubuntu-latest
+    environment: "Staging Plan"
     defaults:
       run:
         working-directory: "staging"
