@@ -3,11 +3,18 @@ zones:
   main: tomy.tech
 
 # R2 buckets
-# location is an optional hint: WNAM, ENAM, WEUR, EEUR, APAC, OC
 buckets:
   img:
     name: tomy-img-staging
     location: APAC
+    access_hosts:
+      # Must include scheme
+      - https://tomy.tech
+      - http://localhost:1313
+    bucket_hosts:
+      # Must not include scheme
+      # Must be a subdomain of the main zone
+      - img.tomy.tech
   misc:
     name: tomy-misc-staging
     location: APAC

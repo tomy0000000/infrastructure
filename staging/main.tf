@@ -20,9 +20,14 @@ module "zone_main" {
 module "r2_img" {
   source = "../template/r2"
 
-  account_id  = var.cloudflare_account_id
-  bucket_name = local.buckets.img.name
-  location    = local.buckets.img.location
+  account_id   = var.cloudflare_account_id
+  bucket_name  = local.buckets.img.name
+  location     = local.buckets.img.location
+  access_hosts = local.buckets.img.access_hosts
+  bucket_hosts = [for host in local.buckets.img.bucket_hosts : {
+    domain  = host
+    zone_id = module.zone_main.zone_id
+  }]
 }
 
 module "r2_misc" {
