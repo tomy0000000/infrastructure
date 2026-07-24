@@ -1,9 +1,20 @@
 locals {
   # Core
   environment = "staging"
+  config      = yamldecode(file("${path.module}/config.yaml"))
+
+  # Cloudflare zones
+  zones = local.config.zones
 
   # R2 buckets
-  buckets = yamldecode(file("${path.module}/config.yaml")).buckets
+  buckets = local.config.buckets
+}
+
+module "zone_main" {
+  source = "../template/zone"
+
+  account_id = var.cloudflare_account_id
+  domain     = local.zones.main
 }
 
 module "r2_img" {

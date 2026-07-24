@@ -1,3 +1,7 @@
+# Cloudflare zones
+zones:
+  main: tomy.tech
+
 # R2 buckets
 # location is an optional hint: WNAM, ENAM, WEUR, EEUR, APAC, OC
 buckets:
