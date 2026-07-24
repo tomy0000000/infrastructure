@@ -18,8 +18,9 @@ API token the Terraform Cloudflare provider uses.
 1. Go to [Cloudflare dashboard](https://dash.cloudflare.com) → profile icon
    (top right) → **Profile** → **API Tokens**
 2. Click **Create Token** → **Create Custom Token**
-3. Name it (e.g. `Infrastructure Staging`) and add the permission:
-   **Account** → **Workers R2 Storage** → **Edit**
+3. Name it (e.g. `Infrastructure Staging`) and add the permissions:
+   - **Account** → **Workers R2 Storage** → **Edit**
+   - **Zone** → **Zone** → **Edit**
 4. Scope it to a specific account under **Account Resources**
 5. **Continue to summary** → **Create Token**
 
