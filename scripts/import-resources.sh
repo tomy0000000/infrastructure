@@ -71,6 +71,60 @@ import_buckets() {
   done < <(yq -r '.buckets | to_entries | .[] | .key + " " + .value.name' "$env/config.yaml")
 }
 
+
+# cloudflare_r2_custom_domain does not support import,
+# so we have to inject it into the state manually.
+import_bucket_hosts() {
+  local env="$1"
+  local key bucket host address resp attrs
+  while read -r key bucket host; do
+    [[ -z "$host" ]] && continue # bucket without bucket_hosts
+    address="module.r2_${key}.cloudflare_r2_custom_domain.this[\"${host}\"]"
+    if [[ -n $(terraform -chdir="$env" state list "$address" 2>/dev/null) ]]; then
+      echo "$env: bucket host ${host} already in state"
+      continue
+    fi
+    resp=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+      "https://api.cloudflare.com/client/v4/accounts/${TF_VAR_cloudflare_account_id}/r2/buckets/${bucket}/domains/custom/${host}")
+    if [[ $(jq -r '.success' <<<"$resp") != "true" ]]; then
+      echo "$env: bucket host ${host} not found, plan will create it"
+      continue
+    fi
+    attrs=$(jq --arg aid "$TF_VAR_cloudflare_account_id" --arg bucket "$bucket" '{
+      account_id: $aid,
+      bucket_name: $bucket,
+      domain: .result.domain,
+      enabled: .result.enabled,
+      zone_id: .result.zoneId,
+      zone_name: .result.zoneName,
+      min_tls: (.result.minTLS // null),
+      ciphers: null,
+      jurisdiction: "default",
+      status: {ownership: .result.status.ownership, ssl: .result.status.ssl}
+    }' <<<"$resp")
+    if terraform -chdir="$env" state pull \
+      | jq --arg mod "module.r2_${key}" --arg host "$host" --argjson attrs "$attrs" '
+          {index_key: $host, schema_version: 0, attributes: $attrs, sensitive_attributes: []} as $inst
+          | def match: .module == $mod and .type == "cloudflare_r2_custom_domain" and .name == "this";
+            if any(.resources[]; match)
+            then .resources |= map(if match then .instances += [$inst] else . end)
+            else .resources += [{
+              module: $mod, mode: "managed", type: "cloudflare_r2_custom_domain", name: "this",
+              provider: "provider[\"registry.terraform.io/cloudflare/cloudflare\"]",
+              instances: [$inst]
+            }]
+            end
+          | .serial += 1
+        ' \
+      | terraform -chdir="$env" state push - > /dev/null 2>&1; then
+      echo "$env: adopted bucket host ${host} into state"
+    else
+      echo "$env: state injection for bucket host ${host} failed" >&2
+      exit 1
+    fi
+  done < <(yq -r '.buckets | to_entries | .[] | .key + " " + .value.name + " " + ((.value.bucket_hosts // [])[])' "$env/config.yaml")
+}
+
 for env in "${ENVS[@]}"; do
   if [[ ! -f "$env/config.yaml" ]]; then
     echo "$env: no config.yaml, skipping"
@@ -79,4 +133,9 @@ for env in "${ENVS[@]}"; do
   load_env "$env"
   import_zones "$env"
   import_buckets "$env"
+  import_bucket_hosts "$env"
+
+  # These resources does not support import, but its create is idempotent
+  # - cloudflare_r2_bucket_cors
+  # - cloudflare_r2_bucket_lifecycle
 done

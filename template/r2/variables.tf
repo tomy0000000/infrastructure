@@ -13,3 +13,18 @@ variable "location" {
   description = "Optional R2 location hint (e.g. WNAM, ENAM, APAC)"
   default     = null
 }
+
+variable "access_hosts" {
+  type        = list(string)
+  description = "Origins allowed to GET objects via CORS. Empty means no CORS resource is managed"
+  default     = []
+}
+
+variable "bucket_hosts" {
+  type = list(object({
+    domain  = string
+    zone_id = string
+  }))
+  description = "Custom domains serving the bucket, each with the zone it belongs to. Empty means none is managed"
+  default     = []
+}
