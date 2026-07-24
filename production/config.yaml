@@ -3,11 +3,20 @@ zones:
   main: tomy.me
 
 # R2 buckets
-# location is an optional hint: WNAM, ENAM, WEUR, EEUR, APAC, OC
 buckets:
   img:
     name: tomy-img
     location: APAC
+    access_hosts:
+      # Must include scheme
+      - https://blog.tomy.me
+      - https://docs.tomy.me
+      - http://localhost:1313
+      - http://0.0.0.0:1313
+    bucket_hosts:
+      # Must not include scheme
+      # Must be a subdomain of the main zone
+      - img.tomy.me
   misc:
     name: tomy-misc
     location: APAC
