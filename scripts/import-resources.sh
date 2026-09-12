@@ -130,6 +130,10 @@ for env in "${ENVS[@]}"; do
     echo "$env: no config.yaml, skipping"
     continue
   fi
+  if [[ ! -d "$env/.terraform" ]]; then
+    echo "$env: not initialised, skipping"
+    continue
+  fi
   load_env "$env"
   import_zones "$env"
   import_buckets "$env"
