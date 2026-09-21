@@ -1,19 +1,19 @@
-name: "🚀 Apply Staging"
+name: "🚀 Apply Production"
 
 on:
   push:
     branches:
-      - "develop"
+      - "main"
     paths:
-      - "staging/**"
+      - "production/**"
       - "template/**"
-      - ".github/workflows/apply-staging.yml"
+      - ".github/workflows/apply-production.yml"
   workflow_dispatch:
 
 # Stateless runs must never overlap: each one imports existing buckets into
 # a fresh throwaway state, so two racing applies would double-create.
 concurrency:
-  group: terraform-staging
+  group: terraform-production
   cancel-in-progress: false
 
 permissions:
@@ -31,10 +31,10 @@ jobs:
   plan:
     name: "🏗 Terraform Plan"
     runs-on: ubuntu-latest
-    environment: "Staging Plan"
+    environment: "Production Plan"
     defaults:
       run:
-        working-directory: "staging"
+        working-directory: "production"
     steps:
       - name: "🛒 Checkout"
         uses: actions/checkout@v7
@@ -44,7 +44,7 @@ jobs:
 
       - name: "🎨 Format Check"
         working-directory: "."
-        run: terraform fmt -check -recursive staging template
+        run: terraform fmt -check -recursive production template
 
       - name: "⚙️ Terraform Init"
         run: terraform init -input=false
@@ -64,8 +64,8 @@ jobs:
         with:
           name: tfplan
           path: |
-            staging/tfplan
-            staging/terraform.tfstate
+            production/tfplan
+            production/terraform.tfstate
           retention-days: 3
           if-no-files-found: warn
 
@@ -74,10 +74,10 @@ jobs:
     needs: plan
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    environment: "Staging"
+    environment: "Production"
     defaults:
       run:
-        working-directory: "staging"
+        working-directory: "production"
     steps:
       - name: "🛒 Checkout"
         uses: actions/checkout@v7
@@ -89,7 +89,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: tfplan
-          path: staging
+          path: production
 
       - name: "⚙️ Terraform Init"
         run: terraform init -input=false

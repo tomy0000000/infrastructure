@@ -1,20 +1,22 @@
 # Cloudflare zones
 zones:
-  main: tomy.tech
+  main: tomy.me
 
 # R2 buckets
 buckets:
   img:
-    name: tomy-img-staging
+    name: tomy-img
     location: APAC
     access_hosts:
       # Must include scheme
-      - https://tomy.tech
+      - https://blog.tomy.me
+      - https://docs.tomy.me
       - http://localhost:1313
+      - http://0.0.0.0:1313
     bucket_hosts:
       # Must not include scheme
       # Must be a subdomain of the main zone
-      - img.tomy.tech
+      - img.tomy.me
   misc:
-    name: tomy-misc-staging
+    name: tomy-misc
     location: APAC

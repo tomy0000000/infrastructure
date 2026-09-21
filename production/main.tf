@@ -1,6 +1,6 @@
 locals {
   # Core
-  environment = "staging"
+  environment = "production"
   config      = yamldecode(file("${path.module}/config.yaml"))
 
   # Cloudflare zones
