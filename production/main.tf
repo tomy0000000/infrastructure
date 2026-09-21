@@ -8,6 +8,9 @@ locals {
 
   # R2 buckets
   buckets = local.config.buckets
+
+  # DOKS cluster
+  kubernetes = local.config.kubernetes
 }
 
 module "zone_main" {
@@ -36,4 +39,18 @@ module "r2_misc" {
   account_id  = var.cloudflare_account_id
   bucket_name = local.buckets.misc.name
   location    = local.buckets.misc.location
+}
+
+module "doks" {
+  source = "../template/doks"
+
+  name           = local.kubernetes.name
+  region         = local.kubernetes.region
+  version_prefix = local.kubernetes.version_prefix
+  ha             = local.kubernetes.ha
+  auto_upgrade   = local.kubernetes.auto_upgrade
+  node_size      = local.kubernetes.node.size
+  node_min       = local.kubernetes.node.min
+  node_max       = local.kubernetes.node.max
+  tags           = [local.environment]
 }
