@@ -24,6 +24,22 @@ API token the Terraform Cloudflare provider uses.
 4. Scope it to a specific account under **Account Resources**
 5. **Continue to summary** → **Create Token**
 
+## `DIGITALOCEAN_TOKEN`
+
+Personal access token the Terraform DigitalOcean provider uses, and the same
+token the kubeconfig embeds for cluster access.
+
+1. Go to [DigitalOcean control panel](https://cloud.digitalocean.com) → **Account** in the left sidebar → **API** → **Tokens** tab
+2. Click **Generate New Token**
+3. Name it (e.g. `Infrastructure Staging`) and pick an expiry
+4. Grant **Full Access**, or custom scopes covering `kubernetes` and
+   `load_balancer` read and write
+5. **Generate Token**, then copy it right away. DigitalOcean shows the value
+   only once
+
+A cluster's kubeconfig authenticates as this token, so revoking it also cuts
+`kubectl` access until `mise run kubeconfig <env>` is run against a new one.
+
 ## `LINODE_TOKEN`
 
 Personal access token the Terraform Linode provider uses.
