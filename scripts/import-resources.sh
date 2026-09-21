@@ -126,6 +126,59 @@ import_bucket_hosts() {
   done < <(yq -r '.buckets | to_entries | .[] | .key + " " + .value.name + " " + ((.value.bucket_hosts // [])[])' "$env/config.yaml")
 }
 
+# cloudflare_r2_bucket_cors and cloudflare_r2_bucket_lifecycle do not support
+# import either, but their read does refresh, so a stub carrying only the
+# identity attributes is enough and the next plan fills the rules back in.
+import_bucket_rules() {
+  local env="$1"
+  local key name hosts kind index_key address
+  while read -r key name hosts; do
+    # Refreshing rules against a bucket that is not in state yet would 404.
+    if [[ -z $(terraform -chdir="$env" state list "module.r2_${key}.cloudflare_r2_bucket.this" 2>/dev/null) ]]; then
+      echo "$env: ${name} not in state, plan will create its rules"
+      continue
+    fi
+    for kind in cors lifecycle; do
+      index_key=null
+      if [[ "$kind" == "cors" ]]; then
+        [[ "$hosts" -eq 0 ]] && continue # count = 0, no instance to adopt
+        index_key=0
+      fi
+      address="module.r2_${key}.cloudflare_r2_bucket_${kind}.this"
+      [[ "$index_key" == "0" ]] && address="${address}[0]"
+      if [[ -n $(terraform -chdir="$env" state list "$address" 2>/dev/null) ]]; then
+        echo "$env: ${name} ${kind} already in state"
+        continue
+      fi
+      if terraform -chdir="$env" state pull \
+        | jq --arg mod "module.r2_${key}" --arg type "cloudflare_r2_bucket_${kind}" \
+             --arg aid "$TF_VAR_cloudflare_account_id" --arg bucket "$name" \
+             --argjson index_key "$index_key" '
+            # 500 is the schema version the Cloudflare provider writes for these.
+            ({schema_version: 500, sensitive_attributes: [], attributes: {
+                account_id: $aid, bucket_name: $bucket, jurisdiction: "default", rules: null}}
+              + (if $index_key == null then {} else {index_key: $index_key} end)) as $inst
+            | def match: .module == $mod and .type == $type and .name == "this";
+              if any(.resources[]; match)
+              then .resources |= map(if match then .instances += [$inst] else . end)
+              else .resources += [{
+                module: $mod, mode: "managed", type: $type, name: "this",
+                provider: "provider[\"registry.terraform.io/cloudflare/cloudflare\"]",
+                instances: [$inst]
+              }]
+              end
+            | .serial += 1
+          ' \
+        | terraform -chdir="$env" state push - > /dev/null 2>&1; then
+        echo "$env: adopted ${name} ${kind} into state"
+      else
+        echo "$env: state injection for ${name} ${kind} failed" >&2
+        exit 1
+      fi
+    done
+  done < <(yq -r '.buckets | to_entries | .[] | .key + " " + .value.name + " " + ((.value.access_hosts // []) | length | tostring)' "$env/config.yaml")
+}
+
 # A cluster must never be double-created, so a lookup that succeeds but fails
 # to import is fatal rather than falling through to create.
 import_cluster() {
@@ -177,10 +230,9 @@ for env in "${ENVS[@]}"; do
   import_zones "$env"
   import_buckets "$env"
   import_bucket_hosts "$env"
+  import_bucket_rules "$env"
   import_cluster "$env"
 
   # These resources does not support import, but its create is idempotent
-  # - cloudflare_r2_bucket_cors
-  # - cloudflare_r2_bucket_lifecycle
   # - cloudflare_r2_managed_domain
 done
