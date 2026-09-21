@@ -22,6 +22,7 @@ load_env() {
 
   : "${CLOUDFLARE_API_TOKEN:?}"
   : "${TF_VAR_cloudflare_account_id:?}"
+  : "${DIGITALOCEAN_TOKEN:?}"
 }
 
 import_zones() {
@@ -125,6 +126,44 @@ import_bucket_hosts() {
   done < <(yq -r '.buckets | to_entries | .[] | .key + " " + .value.name + " " + ((.value.bucket_hosts // [])[])' "$env/config.yaml")
 }
 
+# A cluster must never be double-created, so a lookup that succeeds but fails
+# to import is fatal rather than falling through to create.
+import_cluster() {
+  local env="$1"
+  local name resp cluster_id
+  name=$(yq -r '.kubernetes.name // ""' "$env/config.yaml")
+  [[ -z "$name" ]] && return 0
+
+  if [[ -n $(terraform -chdir="$env" state list "module.doks.digitalocean_kubernetes_cluster.this" 2>/dev/null) ]]; then
+    echo "$env: cluster ${name} already in state"
+    return 0
+  fi
+
+  # The API has no name filter for clusters, so match client side.
+  resp=$(curl -s -H "Authorization: Bearer $DIGITALOCEAN_TOKEN" \
+    "https://api.digitalocean.com/v2/kubernetes/clusters?per_page=200")
+  if [[ $(jq -r 'has("kubernetes_clusters")' <<<"$resp") != "true" ]]; then
+    echo "$env: cluster lookup for ${name} failed: $(jq -c '.message // .' <<<"$resp")" >&2
+    exit 1
+  fi
+  cluster_id=$(jq -r --arg name "$name" \
+    'first(.kubernetes_clusters[] | select(.name == $name) | .id) // empty' <<<"$resp")
+  if [[ -z "$cluster_id" ]]; then
+    echo "$env: cluster ${name} not found, plan will create it"
+    return 0
+  fi
+
+  # The default node pool rides along, because the provider tags a lone pool
+  # as terraform:default-node-pool during import.
+  if terraform -chdir="$env" import -input=false \
+      "module.doks.digitalocean_kubernetes_cluster.this" "$cluster_id" > /dev/null 2>&1; then
+    echo "$env: imported cluster ${name}"
+  else
+    echo "$env: import of cluster ${name} failed" >&2
+    exit 1
+  fi
+}
+
 for env in "${ENVS[@]}"; do
   if [[ ! -f "$env/config.yaml" ]]; then
     echo "$env: no config.yaml, skipping"
@@ -138,8 +177,10 @@ for env in "${ENVS[@]}"; do
   import_zones "$env"
   import_buckets "$env"
   import_bucket_hosts "$env"
+  import_cluster "$env"
 
   # These resources does not support import, but its create is idempotent
   # - cloudflare_r2_bucket_cors
   # - cloudflare_r2_bucket_lifecycle
+  # - cloudflare_r2_managed_domain
 done
