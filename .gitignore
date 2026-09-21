@@ -42,3 +42,7 @@ terraform.rc
 # Local environment variables
 instance/*.env
 !instance/template.env
+
+# Terraform plan output files
+staging/tfplan
+production/tfplan
