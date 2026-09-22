@@ -11,6 +11,9 @@ locals {
 
   # DOKS cluster
   kubernetes = local.config.kubernetes
+
+  # Linode instances
+  instances = local.config.instances
 }
 
 module "zone_main" {
@@ -53,4 +56,18 @@ module "doks" {
   node_min       = local.kubernetes.node.min
   node_max       = local.kubernetes.node.max
   tags           = [local.environment]
+}
+
+module "linode_mailcow" {
+  source = "../template/linode-for-email"
+
+  name             = local.instances.mailcow.name
+  region           = local.instances.mailcow.region
+  type             = local.instances.mailcow.type
+  private_ip       = local.instances.mailcow.private_ip
+  backups_enabled  = local.instances.mailcow.backups_enabled
+  hostname         = local.instances.mailcow.hostname
+  zone_id          = module.zone_main.zone_id
+  image            = local.instances.mailcow.image
+  authorized_users = local.instances.mailcow.authorized_users
 }

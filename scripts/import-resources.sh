@@ -23,6 +23,7 @@ load_env() {
   : "${CLOUDFLARE_API_TOKEN:?}"
   : "${TF_VAR_cloudflare_account_id:?}"
   : "${DIGITALOCEAN_TOKEN:?}"
+  : "${LINODE_TOKEN:?}"
 }
 
 import_zones() {
@@ -217,6 +218,148 @@ import_cluster() {
   fi
 }
 
+# A compute instance must never be double-created, so a lookup that succeeds
+# but fails to import is fatal rather than falling through to create.
+import_instances() {
+  local env="$1"
+  local key name resp instance_id
+  while read -r key name; do
+    if [[ -n $(terraform -chdir="$env" state list "module.linode_${key}.linode_instance.this" 2>/dev/null) ]]; then
+      echo "$env: instance ${name} already in state"
+      continue
+    fi
+    resp=$(curl -s -H "Authorization: Bearer $LINODE_TOKEN" \
+      -H "X-Filter: {\"label\": \"${name}\"}" \
+      "https://api.linode.com/v4/linode/instances")
+    if [[ $(jq -r 'has("data")' <<<"$resp") != "true" ]]; then
+      echo "$env: instance lookup for ${name} failed: $(jq -c '.errors' <<<"$resp")" >&2
+      exit 1
+    fi
+    instance_id=$(jq -r '.data[0].id // empty' <<<"$resp")
+    if [[ -z "$instance_id" ]]; then
+      echo "$env: instance ${name} not found, plan will create it"
+      continue
+    fi
+    if terraform -chdir="$env" import -input=false \
+        "module.linode_${key}.linode_instance.this" "$instance_id" > /dev/null 2>&1; then
+      echo "$env: imported instance ${name}"
+    else
+      echo "$env: import of instance ${name} failed" >&2
+      exit 1
+    fi
+  done < <(yq -r '.instances // {} | to_entries | .[] | .key + " " + .value.name' "$env/config.yaml")
+}
+
+# cloudflare_dns_record is imported as <zone_id>/<record_id>, so the records can
+# only be adopted once the zone that holds them is itself in state.
+import_instance_dns() {
+  local env="$1"
+  local zone_id key hostname record rname rtype address resp matches record_id
+  if [[ -z $(terraform -chdir="$env" state list "module.zone_main.cloudflare_zone.this" 2>/dev/null) ]]; then
+    echo "$env: main zone not in state, plan will create the instance records"
+    return 0
+  fi
+  zone_id=$(terraform -chdir="$env" state pull | jq -r 'first(.resources[]
+    | select(.module == "module.zone_main" and .type == "cloudflare_zone")
+    | .instances[0].attributes.id)')
+  while read -r key hostname; do
+    for record in a:A aaaa:AAAA; do
+      rname=${record%%:*}
+      rtype=${record##*:}
+      address="module.linode_${key}.cloudflare_dns_record.${rname}"
+      if [[ -n $(terraform -chdir="$env" state list "$address" 2>/dev/null) ]]; then
+        echo "$env: ${rtype} record ${hostname} already in state"
+        continue
+      fi
+      resp=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+        "https://api.cloudflare.com/client/v4/zones/${zone_id}/dns_records?name.exact=${hostname}&type=${rtype}")
+      if [[ $(jq -r '.success' <<<"$resp") != "true" ]]; then
+        echo "$env: ${rtype} record lookup for ${hostname} failed: $(jq -c '.errors' <<<"$resp")" >&2
+        exit 1
+      fi
+      # A name and type can hold several records, and guessing adopts the wrong one.
+      matches=$(jq -r '.result | length' <<<"$resp")
+      if [[ "$matches" -gt 1 ]]; then
+        echo "$env: ${rtype} record ${hostname} has ${matches} matches, import it by hand" >&2
+        exit 1
+      fi
+      record_id=$(jq -r '.result[0].id // empty' <<<"$resp")
+      if [[ -z "$record_id" ]]; then
+        echo "$env: ${rtype} record ${hostname} not found, plan will create it"
+        continue
+      fi
+      if terraform -chdir="$env" import -input=false \
+          "$address" "${zone_id}/${record_id}" > /dev/null 2>&1; then
+        echo "$env: imported ${rtype} record ${hostname}"
+      else
+        echo "$env: import of ${rtype} record ${hostname} failed"
+      fi
+    done
+  done < <(yq -r '.instances // {} | to_entries | .[] | .key + " " + .value.hostname' "$env/config.yaml")
+}
+
+# Skips when already in state or when there is nothing to adopt, and fails hard
+# otherwise, since a stray create here allocates a fresh IPv6 range.
+import_or_die() {
+  local env="$1" address="$2" id="$3" desc="$4"
+  if [[ -n $(terraform -chdir="$env" state list "$address" 2>/dev/null) ]]; then
+    echo "$env: ${desc} already in state"
+  elif [[ -z "$id" ]]; then
+    echo "$env: ${desc} not found, plan will create it"
+  elif terraform -chdir="$env" import -input=false "$address" "$id" > /dev/null 2>&1; then
+    echo "$env: imported ${desc}"
+  else
+    echo "$env: import of ${desc} failed" >&2
+    exit 1
+  fi
+}
+
+# linode_ipv6_range imports by its range and linode_rdns by address, both of
+# which only the instance's own IP listing reveals, so this runs after it.
+import_instance_network() {
+  local env="$1"
+  local key name mod instance_id resp v4 range route_target
+  while read -r key name; do
+    mod="module.linode_${key}"
+    instance_id=$(terraform -chdir="$env" state pull | jq -r --arg mod "$mod" 'first(.resources[]
+      | select(.module == $mod and .type == "linode_instance")
+      | .instances[0].attributes.id) // empty')
+    if [[ -z "$instance_id" ]]; then
+      echo "$env: instance ${name} not in state, plan will create its network"
+      continue
+    fi
+    resp=$(curl -s -H "Authorization: Bearer $LINODE_TOKEN" \
+      "https://api.linode.com/v4/linode/instances/${instance_id}/ips")
+    if [[ $(jq -r 'has("ipv4")' <<<"$resp") != "true" ]]; then
+      echo "$env: ip lookup for ${name} failed: $(jq -c '.errors' <<<"$resp")" >&2
+      exit 1
+    fi
+    v4=$(jq -r 'first(.ipv4.public[].address) // empty' <<<"$resp")
+    range=$(jq -r 'first(.ipv6.global[].range) // empty' <<<"$resp")
+    import_or_die "$env" "${mod}.linode_ipv6_range.this" "$range" "${name} ipv6 range"
+    import_or_die "$env" "${mod}.linode_rdns.v4" "$v4" "${name} v4 rdns"
+    # main.tf puts the AAAA and the v6 PTR on the first address of the range.
+    import_or_die "$env" "${mod}.linode_rdns.v6" "${range:+${range}1}" "${name} v6 rdns"
+    # Read never back-fills these, and null plans as a replacement (range) or an update (rdns).
+    route_target=$(jq -r 'first(.ipv6.global[].route_target) // empty' <<<"$resp")
+    if terraform -chdir="$env" state pull \
+      | jq --arg mod "$mod" --argjson lid "$instance_id" --arg rt "$route_target" '
+          .resources |= map(
+            if .module == $mod and .type == "linode_ipv6_range"
+            then .instances |= map(.attributes += {linode_id: $lid, route_target: $rt})
+            elif .module == $mod and .type == "linode_rdns"
+            then .instances |= map(.attributes += {wait_for_available: true})
+            else . end)
+          | .serial += 1' \
+      | terraform -chdir="$env" state push - > /dev/null 2>&1; then
+      echo "$env: patched ${name} network attributes into state"
+    else
+      echo "$env: state injection for ${name} network failed" >&2
+      exit 1
+    fi
+  done < <(yq -r '.instances // {} | to_entries | .[] | .key + " " + .value.name' "$env/config.yaml")
+}
+
 for env in "${ENVS[@]}"; do
   if [[ ! -f "$env/config.yaml" ]]; then
     echo "$env: no config.yaml, skipping"
@@ -232,6 +375,9 @@ for env in "${ENVS[@]}"; do
   import_bucket_hosts "$env"
   import_bucket_rules "$env"
   import_cluster "$env"
+  import_instances "$env"
+  import_instance_dns "$env"
+  import_instance_network "$env"
 
   # These resources does not support import, but its create is idempotent
   # - cloudflare_r2_managed_domain
