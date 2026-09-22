@@ -1,0 +1,17 @@
+# One Gateway for the whole cluster, since each one costs a DO load balancer.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: shared
+  namespace: {{ .Release.Namespace }}
+spec:
+  gatewayClassName: eg
+  listeners:
+    # Placeholder until the wildcard certificate exists, then this becomes HTTPS.
+    - name: http
+      protocol: HTTP
+      port: 80
+      hostname: "*.{{ required "zone is required" .Values.zone }}"
+      allowedRoutes:
+        namespaces:
+          from: All

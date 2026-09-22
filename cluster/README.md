@@ -7,12 +7,15 @@ the cluster, helmfile owns what is inside it.
 
 - `platform/` shared services every app depends on. Today: Envoy Gateway, and
   `charts/cluster-config`, a local chart for cluster-scoped objects no upstream
-  chart ships. Today: the `eg` GatewayClass that binds Gateways to Envoy Gateway.
+  chart ships. Today: the `eg` GatewayClass that binds Gateways to Envoy Gateway,
+  and the one `shared` Gateway every app attaches routes to, since each Gateway
+  costs a DigitalOcean load balancer.
 
 ## Environments
 
 Environments read `../staging/config.yaml` and `../production/config.yaml`, so
-each environment keeps the one config file Terraform already uses.
+each environment keeps the one config file Terraform already uses. The Gateway
+listener hostname derives from the zone defined there.
 
 ## CRDs
 

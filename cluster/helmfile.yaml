@@ -31,3 +31,5 @@ releases:
     chart: ./platform/charts/cluster-config
     needs:
       - envoy-gateway-system/envoy-gateway
+    values:
+      - platform/values/cluster-config.yaml.gotmpl
