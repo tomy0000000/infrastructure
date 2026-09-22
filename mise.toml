@@ -3,6 +3,9 @@
 terraform = "1.15.8"
 doctl = "latest"
 op = "latest"
+helm = "latest"
+helmfile = "latest"
+kubectl = "latest"
 
 [task_config]
 includes = ["scripts"]

@@ -1,0 +1,26 @@
+# Environments reuse the Terraform config files so each environment keeps one
+# source of truth.
+environments:
+  staging:
+    values:
+      - ../staging/config.yaml
+  production:
+    values:
+      - ../production/config.yaml
+
+---
+releases:
+  ## Platform: shared services every app depends on.
+
+  # Envoy Gateway CRDs and controller
+  - name: envoy-gateway
+    namespace: envoy-gateway-system
+    chart: oci://docker.io/envoyproxy/gateway-helm
+    version: 1.9.1
+    hooks:
+      - events: [presync]
+        showlogs: true
+        command: ./scripts/apply-gateway-crds.sh
+        args: ["{{ .Release.Version }}"]
+    values:
+      - platform/values/envoy-gateway.yaml
