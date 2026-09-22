@@ -2,7 +2,11 @@
 set -euo pipefail
 #MISE description="Import existing resources into Terraform state"
 
-ENVS=(staging production)
+# Environment -> import steps to skip (staging has no cluster or instances)
+declare -A ENVS=(
+  [staging]="cluster instances instance_dns instance_network"
+  [production]=""
+)
 
 # Load provider credentials. In CI they come from the runner's secrets; when
 # running locally, source them from instance/<env>.env (gitignored).
@@ -360,7 +364,16 @@ import_instance_network() {
   done < <(yq -r '.instances // {} | to_entries | .[] | .key + " " + .value.name' "$env/config.yaml")
 }
 
-for env in "${ENVS[@]}"; do
+step() {
+  local env="$1" name="$2"
+  if [[ " ${ENVS[$env]} " == *" $name "* ]]; then
+    echo "$env: skipping $name"
+    return
+  fi
+  "import_$name" "$env"
+}
+
+for env in "${!ENVS[@]}"; do
   if [[ ! -f "$env/config.yaml" ]]; then
     echo "$env: no config.yaml, skipping"
     continue
@@ -370,14 +383,14 @@ for env in "${ENVS[@]}"; do
     continue
   fi
   load_env "$env"
-  import_zones "$env"
-  import_buckets "$env"
-  import_bucket_hosts "$env"
-  import_bucket_rules "$env"
-  import_cluster "$env"
-  import_instances "$env"
-  import_instance_dns "$env"
-  import_instance_network "$env"
+  step "$env" zones
+  step "$env" buckets
+  step "$env" bucket_hosts
+  step "$env" bucket_rules
+  step "$env" cluster
+  step "$env" instances
+  step "$env" instance_dns
+  step "$env" instance_network
 
   # These resources does not support import, but its create is idempotent
   # - cloudflare_r2_managed_domain
