@@ -19,10 +19,14 @@ API token the Terraform Cloudflare provider uses.
    (top right) → **Profile** → **API Tokens**
 2. Click **Create Token** → **Create Custom Token**
 3. Name it (e.g. `Infrastructure Staging`) and add the permissions:
-   - **Account** → **Workers R2 Storage** → **Edit**
-   - **Zone** → **Zone** → **Edit**
+   - **Account** → **Workers R2 Storage** → **Edit** (R2 buckets)
+   - **Zone** → **Zone** → **Edit** (zones)
+   - **Zone** → **DNS** → **Edit** (the A and AAAA records fronting each instance)
 4. Scope it to a specific account under **Account Resources**
 5. **Continue to summary** → **Create Token**
+
+An existing token can be edited in place to add a missing permission, so there
+is no need to issue a new one and update both env files.
 
 ## `DIGITALOCEAN_TOKEN`
 
@@ -49,8 +53,17 @@ Personal access token the Terraform Linode provider uses.
 2. Click **Create a Personal Access Token**
 3. Label it (e.g. `Infrastructure Staging`) and pick an expiry
 4. Leave every scope at **No Access** except:
-   - **Linodes** → **Read/Write**
+   - **Linodes** → **Read/Write** (the instances themselves)
+   - **IPs** → **Read/Write** (reverse DNS and IPv6 ranges)
 5. **Create Token**, then copy it right away. Linode shows the value only once
+
+Reverse DNS and IPv6 ranges live under `/networking/`, which the **Linodes**
+scope does not cover. A token without **IPs** can still read an instance and its
+addresses, so the gap only surfaces when Terraform tries to set a PTR or
+allocate a range.
+
+Linode cannot change the scopes of an existing personal access token, so
+widening access means creating a replacement and revoking the old one.
 
 ## `TF_VAR_cloudflare_account_id`
 

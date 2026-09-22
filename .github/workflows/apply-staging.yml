@@ -23,6 +23,7 @@ env:
   CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
   DIGITALOCEAN_TOKEN: ${{ secrets.DIGITALOCEAN_TOKEN }}
   TF_VAR_cloudflare_account_id: ${{ secrets.TF_VAR_CLOUDFLARE_ACCOUNT_ID }}
+  LINODE_TOKEN: ${{ secrets.LINODE_TOKEN }}
   TF_IN_AUTOMATION: "true"
   # Lets mise query the GitHub releases API without anonymous rate limits
   GITHUB_TOKEN: ${{ github.token }}
