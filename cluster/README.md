@@ -5,7 +5,9 @@ the cluster, helmfile owns what is inside it.
 
 ## Layout
 
-- `platform/` shared services every app depends on. Today: Envoy Gateway.
+- `platform/` shared services every app depends on. Today: Envoy Gateway, and
+  `charts/cluster-config`, a local chart for cluster-scoped objects no upstream
+  chart ships. Today: the `eg` GatewayClass that binds Gateways to Envoy Gateway.
 
 ## Environments
 

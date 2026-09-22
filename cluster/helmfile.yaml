@@ -24,3 +24,10 @@ releases:
         args: ["{{ .Release.Version }}"]
     values:
       - platform/values/envoy-gateway.yaml
+
+  # Cluster-scoped Envoy GatewayClass
+  - name: cluster-config
+    namespace: gateway
+    chart: ./platform/charts/cluster-config
+    needs:
+      - envoy-gateway-system/envoy-gateway
