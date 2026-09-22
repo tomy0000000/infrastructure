@@ -1,0 +1,6 @@
+{
+  "files.exclude": {
+    "**/*.tfvars": false,
+    "instance/": false
+  }
+}
