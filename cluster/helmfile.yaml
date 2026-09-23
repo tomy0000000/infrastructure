@@ -39,6 +39,22 @@ releases:
     values:
       - platform/values/cert-manager.yaml
 
+  # Signs CertificateRequests with Cloudflare Origin CA, through cert-manager's approver
+  - name: origin-ca-issuer
+    namespace: origin-ca-issuer
+    chart: oci://ghcr.io/cloudflare/origin-ca-issuer-charts/origin-ca-issuer
+    version: 0.6.9
+    needs:
+      - cert-manager/cert-manager
+    # The chart ships no CRDs, they come from its repo at the matching appVersion.
+    hooks:
+      - events: [presync]
+        showlogs: true
+        command: ./scripts/apply-origin-ca-crds.sh
+        args: ["{{ .Release.Version }}"]
+    values:
+      - platform/values/origin-ca-issuer.yaml
+
   # Cluster-scoped Envoy GatewayClass
   - name: cluster-config
     namespace: gateway

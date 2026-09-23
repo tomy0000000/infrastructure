@@ -6,7 +6,7 @@ the cluster, helmfile owns what is inside it.
 ## Layout
 
 - `platform/` shared services every app depends on. Today: Envoy Gateway,
-  cert-manager, and
+  cert-manager, origin-ca-issuer, and
   `charts/cluster-config`, a local chart for cluster-scoped objects no upstream
   chart ships. Today: the `eg` GatewayClass that binds Gateways to Envoy Gateway,
   and the one `shared` Gateway every app attaches routes to, since each Gateway
@@ -31,6 +31,13 @@ release's own version and server-side applies it. One version pin moves the
 controller and its CRDs together, and `helm diff` still covers the controller.
 `presync` only fires when the release syncs, so `mise run charts <env> sync -l
 name=envoy-gateway` is the way to force the CRDs alone.
+
+origin-ca-issuer has the same shape on a smaller scale. Its chart ships no CRDs
+at all: `OriginIssuer` and `ClusterOriginIssuer` live in the project repo at the
+tag matching the chart's `appVersion`. A `presync` hook,
+`cluster/scripts/apply-origin-ca-crds.sh`, reads that `appVersion` from the
+chart and server-side applies both files from that tag, so the chart version
+stays the only pin.
 
 ### DOKS pre-installs six of them
 
