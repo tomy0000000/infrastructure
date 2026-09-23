@@ -73,3 +73,30 @@ Cloudflare account ID where resources are created.
 2. Copy the 32-character hex ID from the URL right after `dash.cloudflare.com/`,
    or find it under any zone's **Overview** page in the right sidebar as
    **Account ID**
+
+## `ONE_PASSWORD_ESO_SERVICE_ACCOUNT_TOKEN`
+
+1Password Service Account token that External Secrets Operator uses to fetch
+every workload Secret. `mise run charts <env> apply` reads it from this file
+and hands it to the cluster once, as the operator's bootstrap Secret.
+
+1. Go to [1Password](https://my.1password.com) → **Developer** in the left
+   sidebar → **Service Accounts** → **New Service Account**
+2. Name it (e.g. `ESO Production`)
+3. Grant access to the **Develop** vault only, **Read** only
+4. Under **Environment access**, leave every environment at **No Access**.
+   ESO reads items from the vault, and 1Password Environments are a separate
+   feature it does not use
+5. **Create Account**, then copy the token right away. 1Password shows the
+   value only once
+
+A service account cannot be modified after creation. Widening or narrowing
+its access means revoking it and creating a replacement, then updating this
+variable.
+
+The name is deliberately not `OP_SERVICE_ACCOUNT_TOKEN`. The `op` CLI honors
+that variable itself, so it would switch every `op` call in this shell to the
+service account, including the 1Password plugin behind `doctl`.
+
+The Family plan allows 1,000 reads per hour per token and 1,000 reads per day
+across the whole account, which is why ExternalSecrets refresh hourly.
