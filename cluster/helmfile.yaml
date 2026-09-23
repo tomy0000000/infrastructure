@@ -55,11 +55,22 @@ releases:
     values:
       - platform/values/origin-ca-issuer.yaml
 
-  # Cluster-scoped Envoy GatewayClass
+  # Fetches every workload Secret from 1Password. Its own token is the one exception
+  - name: external-secrets
+    namespace: external-secrets
+    chart: oci://ghcr.io/external-secrets/charts/external-secrets
+    version: 2.11.0
+    values:
+      - platform/values/external-secrets.yaml.gotmpl
+
+  # Cluster-scoped objects no chart ships: GatewayClass, Gateway, ClusterSecretStore
   - name: cluster-config
     namespace: gateway
     chart: ./platform/charts/cluster-config
+    # Renders kinds other releases install, absent on an empty cluster
+    disableValidationOnInstall: true
     needs:
       - envoy-gateway-system/envoy-gateway
+      - external-secrets/external-secrets
     values:
       - platform/values/cluster-config.yaml.gotmpl

@@ -20,6 +20,20 @@ if [[ -z "$matched" ]]; then
   exit 1
 fi
 
+# Credentials come from the runner's secrets in CI, and from the gitignored
+# env file locally, the same way import-resources.sh loads them.
+if [[ -z "${CI:-}" ]]; then
+  env_file="instance/${env}.env"
+  if [[ ! -f "$env_file" ]]; then
+    echo "$env: env file not found: $env_file" >&2
+    exit 1
+  fi
+  set -a
+  # shellcheck source=/dev/null
+  source "$env_file"
+  set +a
+fi
+
 cluster="$(yq -r '.kubernetes.name // ""' "$env/config.yaml")"
 if [[ -z "$cluster" ]]; then
   echo "$env: config.yaml defines no kubernetes cluster" >&2

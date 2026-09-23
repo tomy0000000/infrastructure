@@ -6,7 +6,7 @@ the cluster, helmfile owns what is inside it.
 ## Layout
 
 - `platform/` shared services every app depends on. Today: Envoy Gateway,
-  cert-manager, origin-ca-issuer, and
+  cert-manager, origin-ca-issuer, External Secrets Operator, and
   `charts/cluster-config`, a local chart for cluster-scoped objects no upstream
   chart ships. Today: the `eg` GatewayClass that binds Gateways to Envoy Gateway,
   and the one `shared` Gateway every app attaches routes to, since each Gateway
@@ -52,6 +52,25 @@ Never delete those six expecting DOKS to put them back. It installs them at
 provisioning and never reconciles them afterwards, so the only way to a
 DOKS-shaped cluster again is to recreate the cluster.
 
+## Secrets
+
+Every workload Secret is fetched from 1Password by External Secrets Operator
+through its `onepasswordSDK` provider, which talks to the 1Password API with a
+Service Account token. No Connect server. The `onepassword` ClusterSecretStore
+in `cluster-config` is scoped to the `Develop` vault, and a new secret is an
+`ExternalSecret` next to the release that consumes it.
+
+Exactly one secret reaches the cluster by another path: that Service Account
+token. It lives in `instance/<env>.env` as `ONE_PASSWORD_ESO_SERVICE_ACCOUNT_TOKEN`, next
+to the provider tokens, and `mise run charts` loads that file the way
+`import-resources.sh` does. `platform/values/external-secrets.yaml.gotmpl`
+hands it to the chart as an extra object. `instance/README.md` has the setup.
+
+The account is on the Family plan: 1,000 reads per hour per token and 1,000
+reads per day across the account. So `refreshInterval` on an ExternalSecret is
+`1h`, never the `1m` in upstream examples, which alone would burn the daily
+budget on one secret.
+
 ## Restore
 
 Copy-paste, top to bottom. Swap `production` for `staging` for the other
@@ -69,9 +88,9 @@ Cluster, if it is gone. The plan creates it from `production/config.yaml`:
 gh workflow run apply-production.yml && mise run kubeconfig production
 ```
 
-Everything else. `needs:` orders the releases, and the `envoy-gateway` presync
-hook applies the CRDs on the way in, so a fresh cluster and an old one take the
-same command:
+Everything else. `instance/<env>.env` has to exist, see `instance/README.md`.
+`needs:` orders the releases and the presync hooks apply CRDs on the way in,
+so a fresh cluster and an old one take the same command:
 
 ```
 mise run charts production apply
