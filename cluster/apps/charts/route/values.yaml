@@ -1,0 +1,7 @@
+gatewayName: shared
+gatewayNamespace: gateway
+# Read from the app's own values file, which the app chart ignores.
+httpRoute:
+  hostnames: []
+  service: ""
+  port: 0

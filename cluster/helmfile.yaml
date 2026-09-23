@@ -14,6 +14,8 @@ repositories:
     url: https://charts.jetstack.io
   - name: external-dns
     url: https://kubernetes-sigs.github.io/external-dns/
+  - name: uptime-kuma
+    url: https://dirsigler.github.io/uptime-kuma-helm
 
 releases:
   ## Platform: shared services every app depends on.
@@ -89,3 +91,25 @@ releases:
       - external-dns/external-dns
     values:
       - platform/values/cluster-config.yaml.gotmpl
+
+  ## Apps: third-party charts, versions pinned by hand.
+
+  - name: uptime-kuma
+    namespace: uptime-kuma
+    chart: uptime-kuma/uptime-kuma
+    version: 4.2.0
+    needs:
+      - gateway/cluster-config
+    values:
+      - apps/values/uptime-kuma.yaml.gotmpl
+
+  # Its HTTPRoute, from the same values file, so a failure elsewhere cannot block it
+  - name: uptime-kuma-route
+    namespace: uptime-kuma
+    chart: ./apps/charts/route
+    # Renders a kind another release installs, absent on an empty cluster
+    disableValidationOnInstall: true
+    needs:
+      - uptime-kuma/uptime-kuma
+    values:
+      - apps/values/uptime-kuma.yaml.gotmpl

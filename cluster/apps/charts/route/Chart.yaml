@@ -1,0 +1,5 @@
+apiVersion: v2
+name: route
+description: The HTTPRoute attaching one app to the shared Gateway
+type: application
+version: 0.1.0

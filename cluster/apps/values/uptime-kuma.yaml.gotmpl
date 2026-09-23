@@ -1,0 +1,21 @@
+resources:
+  requests:
+    cpu: 25m
+    memory: 128Mi
+
+# Retain: an uninstall keeps the DO volume and the monitor history in it.
+volume:
+  enabled: true
+  size: 2Gi
+  storageClassName: do-block-storage-retain
+
+# A block volume mounts on one pod at a time, so a rolling update would deadlock.
+strategy:
+  type: Recreate
+
+# Read by the uptime-kuma-route release, ignored by the chart above.
+httpRoute:
+  hostnames:
+    - kuma.{{ .Values.zones.main }}
+  service: uptime-kuma
+  port: 3001

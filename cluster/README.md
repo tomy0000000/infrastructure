@@ -12,6 +12,11 @@ the cluster, helmfile owns what is inside it.
   the one `shared` Gateway every app attaches routes to, since each Gateway
   costs a DigitalOcean load balancer, and the Origin CA issuer with the wildcard
   certificate its HTTPS listener serves.
+- `apps/` third-party charts whose versions are pinned and bumped by hand. Each
+  app is two releases reading one values file: the chart, and `charts/route`,
+  a local chart rendering the HTTPRoute that attaches it to the shared Gateway.
+  Separate releases, so one app failing cannot block another's route. Today:
+  Uptime Kuma at `kuma.<zone>`.
 
 ## Environments
 
