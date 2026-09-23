@@ -1,2 +1,4 @@
 # Apex domain the wildcard certificate and the shared Gateway listener cover.
 zone: ""
+# Cluster name, the first part of every 1Password item name ESO fetches.
+cluster: ""

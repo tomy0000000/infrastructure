@@ -1,1 +1,2 @@
 zone: {{ .Values.zones.main }}
+cluster: {{ dig "kubernetes" "name" "" .Values }}

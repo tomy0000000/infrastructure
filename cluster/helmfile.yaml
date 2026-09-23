@@ -63,7 +63,7 @@ releases:
     values:
       - platform/values/external-secrets.yaml.gotmpl
 
-  # Cluster-scoped objects no chart ships: GatewayClass, Gateway, ClusterSecretStore
+  # Cluster-scoped objects no chart ships: GatewayClass, Gateway, ClusterSecretStore, issuer, wildcard cert
   - name: cluster-config
     namespace: gateway
     chart: ./platform/charts/cluster-config
@@ -71,6 +71,8 @@ releases:
     disableValidationOnInstall: true
     needs:
       - envoy-gateway-system/envoy-gateway
+      - cert-manager/cert-manager
+      - origin-ca-issuer/origin-ca-issuer
       - external-secrets/external-secrets
     values:
       - platform/values/cluster-config.yaml.gotmpl

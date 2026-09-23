@@ -9,8 +9,9 @@ the cluster, helmfile owns what is inside it.
   cert-manager, origin-ca-issuer, External Secrets Operator, and
   `charts/cluster-config`, a local chart for cluster-scoped objects no upstream
   chart ships. Today: the `eg` GatewayClass that binds Gateways to Envoy Gateway,
-  and the one `shared` Gateway every app attaches routes to, since each Gateway
-  costs a DigitalOcean load balancer.
+  the one `shared` Gateway every app attaches routes to, since each Gateway
+  costs a DigitalOcean load balancer, and the Origin CA issuer with the wildcard
+  certificate its HTTPS listener serves.
 
 ## Environments
 
@@ -65,6 +66,8 @@ token. It lives in `instance/<env>.env` as `ONE_PASSWORD_ESO_SERVICE_ACCOUNT_TOK
 to the provider tokens, and `mise run charts` loads that file the way
 `import-resources.sh` does. `platform/values/external-secrets.yaml.gotmpl`
 hands it to the chart as an extra object. `instance/README.md` has the setup.
+
+`secrets.md` says how each item is created.
 
 The account is on the Family plan: 1,000 reads per hour per token and 1,000
 reads per day across the account. So `refreshInterval` on an ExternalSecret is

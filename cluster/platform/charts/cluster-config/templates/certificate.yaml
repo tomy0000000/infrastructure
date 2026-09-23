@@ -1,0 +1,15 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wildcard
+  namespace: {{ .Release.Namespace }}
+spec:
+  secretName: wildcard-tls
+  dnsNames:
+    - "*.{{ required "zone is required" .Values.zone }}"
+  duration: 2160h
+  renewBefore: 360h
+  issuerRef:
+    group: cert-manager.k8s.cloudflare.com
+    kind: ClusterOriginIssuer
+    name: prod-issuer
