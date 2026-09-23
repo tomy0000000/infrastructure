@@ -9,6 +9,10 @@ environments:
       - ../production/config.yaml
 
 ---
+repositories:
+  - name: jetstack
+    url: https://charts.jetstack.io
+
 releases:
   ## Platform: shared services every app depends on.
 
@@ -24,6 +28,16 @@ releases:
         args: ["{{ .Release.Version }}"]
     values:
       - platform/values/envoy-gateway.yaml
+
+  # Reads Gateway API CRDs at startup, so it lands after the release that installs them
+  - name: cert-manager
+    namespace: cert-manager
+    chart: jetstack/cert-manager
+    version: 1.21.2
+    needs:
+      - envoy-gateway-system/envoy-gateway
+    values:
+      - platform/values/cert-manager.yaml
 
   # Cluster-scoped Envoy GatewayClass
   - name: cluster-config
