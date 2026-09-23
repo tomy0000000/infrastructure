@@ -6,7 +6,7 @@ the cluster, helmfile owns what is inside it.
 ## Layout
 
 - `platform/` shared services every app depends on. Today: Envoy Gateway,
-  cert-manager, origin-ca-issuer, External Secrets Operator, and
+  cert-manager, origin-ca-issuer, External Secrets Operator, external-dns, and
   `charts/cluster-config`, a local chart for cluster-scoped objects no upstream
   chart ships. Today: the `eg` GatewayClass that binds Gateways to Envoy Gateway,
   the one `shared` Gateway every app attaches routes to, since each Gateway

@@ -37,3 +37,22 @@ Becomes `cloudflare-api-key` in the `origin-ca-issuer` namespace.
 
 Origin CA Service Keys are the older way to do this and were deprecated by
 Cloudflare on 2026-03-19. Only API tokens work with the issuer now.
+
+## `<cluster>-cloudflare-external_dns`
+
+Cloudflare API token external-dns uses to publish records for every
+HTTPRoute. Becomes `cloudflare-api-key` in the `external-dns` namespace.
+
+1. Same path as above: **Create Token** → **Create Custom Token**
+2. Name it (e.g. `External DNS Production`) and add the permission:
+   - **Zone** → **DNS** → **Edit**
+3. Under **Zone Resources**, include the zone the records go into
+4. **Continue to summary** → **Create Token**, then copy it
+5. In 1Password, in `Develop`: **New Item** → **API Credential**, title
+   `<cluster>-cloudflare-external_dns`, paste the token into **credential**
+
+Two tokens rather than one with both permissions, so revoking either leaves
+the other component running.
+
+An existing Cloudflare token can be edited in place to add a permission or a
+zone, so widening access does not mean a new item.

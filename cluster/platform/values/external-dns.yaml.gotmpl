@@ -1,0 +1,27 @@
+provider:
+  name: cloudflare
+
+env:
+  - name: CF_API_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: cloudflare-api-key
+        key: apiKey
+
+domainFilters:
+  - {{ .Values.zones.main }}
+
+# Keeps the two environments from reconciling each other's records.
+txtOwnerId: {{ .Environment.Name }}
+policy: sync
+
+sources:
+  - gateway-httproute
+
+extraArgs:
+  - --cloudflare-proxied
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi

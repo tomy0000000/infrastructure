@@ -12,6 +12,8 @@ environments:
 repositories:
   - name: jetstack
     url: https://charts.jetstack.io
+  - name: external-dns
+    url: https://kubernetes-sigs.github.io/external-dns/
 
 releases:
   ## Platform: shared services every app depends on.
@@ -63,6 +65,16 @@ releases:
     values:
       - platform/values/external-secrets.yaml.gotmpl
 
+  # Publishes a proxied Cloudflare record for every HTTPRoute hostname
+  - name: external-dns
+    namespace: external-dns
+    chart: external-dns/external-dns
+    version: 1.22.0
+    needs:
+      - envoy-gateway-system/envoy-gateway
+    values:
+      - platform/values/external-dns.yaml.gotmpl
+
   # Cluster-scoped objects no chart ships: GatewayClass, Gateway, ClusterSecretStore, issuer, wildcard cert
   - name: cluster-config
     namespace: gateway
@@ -74,5 +86,6 @@ releases:
       - cert-manager/cert-manager
       - origin-ca-issuer/origin-ca-issuer
       - external-secrets/external-secrets
+      - external-dns/external-dns
     values:
       - platform/values/cluster-config.yaml.gotmpl
