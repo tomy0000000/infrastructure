@@ -1,0 +1,94 @@
+# The presync hook applies them, since Helm never upgrades CRDs it installed.
+crds:
+  enabled: false
+
+# Nobody receives alerts yet.
+alertmanager:
+  enabled: false
+
+# DOKS manages the control plane and runs Cilium without kube-proxy, so none of these are reachable.
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeEtcd:
+  enabled: false
+kubeProxy:
+  enabled: false
+
+prometheusOperator:
+  resources:
+    requests:
+      cpu: 20m
+      memory: 64Mi
+
+prometheus:
+  prometheusSpec:
+    retention: 15d
+    retentionSize: 8GB
+    resources:
+      requests:
+        cpu: 100m
+        memory: 400Mi
+    # Retain: an uninstall keeps the DO volume and the metrics history in it.
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: do-block-storage-retain
+          accessModes: [ReadWriteOnce]
+          resources:
+            requests:
+              storage: 10Gi
+
+kube-state-metrics:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+
+prometheus-node-exporter:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+
+# No volume: datasources and dashboards are provisioned, the admin login comes from 1Password.
+grafana:
+  resources:
+    requests:
+      cpu: 25m
+      memory: 128Mi
+  grafana.ini:
+    server:
+      root_url: https://metrics.{{ .Values.zones.main }}
+  admin:
+    existingSecret: grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
+  extraObjects:
+    - apiVersion: external-secrets.io/v1
+      kind: ExternalSecret
+      metadata:
+        name: grafana-admin
+      spec:
+        refreshInterval: 1h
+        secretStoreRef:
+          kind: ClusterSecretStore
+          name: onepassword
+        target:
+          name: grafana-admin
+          creationPolicy: Owner
+        data:
+          - secretKey: admin-user
+            remoteRef:
+              key: {{ dig "kubernetes" "name" "" .Values }}-grafana-admin/username
+          - secretKey: admin-password
+            remoteRef:
+              key: {{ dig "kubernetes" "name" "" .Values }}-grafana-admin/credential
+
+# Read by the kube-prometheus-stack-route release, ignored by the chart above.
+httpRoute:
+  hostnames:
+    - metrics.{{ .Values.zones.main }}
+  service: kube-prometheus-stack-grafana
+  port: 80

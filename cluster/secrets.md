@@ -54,5 +54,20 @@ HTTPRoute. Becomes `cloudflare-api-key` in the `external-dns` namespace.
 Two tokens rather than one with both permissions, so revoking either leaves
 the other component running.
 
+## `<cluster>-grafana-admin`
+
+Grafana's admin login at `metrics.<zone>`. Becomes `grafana-admin` in the
+`monitoring` namespace.
+
+1. In 1Password, in `Develop`: **New Item** → **API Credential**, title
+   `<cluster>-grafana-admin`
+2. Set **username** to the admin login name (e.g. `admin`)
+3. Generate a password into **credential**
+
+Grafana reads both only when its database is empty, and its database lives in
+the pod without a volume, so a changed password takes effect on the next pod
+restart: `kubectl -n monitoring rollout restart deployment
+kube-prometheus-stack-grafana`.
+
 An existing Cloudflare token can be edited in place to add a permission or a
 zone, so widening access does not mean a new item.

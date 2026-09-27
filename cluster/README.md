@@ -16,7 +16,8 @@ the cluster, helmfile owns what is inside it.
   app is two releases reading one values file: the chart, and `charts/route`,
   a local chart rendering the HTTPRoute that attaches it to the shared Gateway.
   Separate releases, so one app failing cannot block another's route. Today:
-  Uptime Kuma at `kuma.<zone>`.
+  Uptime Kuma at `kuma.<zone>`, and kube-prometheus-stack with its Grafana at
+  `metrics.<zone>`.
 
 ## Environments
 
@@ -44,6 +45,12 @@ tag matching the chart's `appVersion`. A `presync` hook,
 `cluster/scripts/apply-origin-ca-crds.sh`, reads that `appVersion` from the
 chart and server-side applies both files from that tag, so the chart version
 stays the only pin.
+
+kube-prometheus-stack does ship its Prometheus Operator CRDs, but Helm
+installs CRDs once and never upgrades them. So the chart's copy is off
+(`crds.enabled: false`) and a `presync` hook,
+`cluster/scripts/apply-prometheus-crds.sh`, server-side applies `helm show
+crds` at the release's own version on every sync.
 
 ### DOKS pre-installs six of them
 
