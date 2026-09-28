@@ -18,6 +18,8 @@ repositories:
     url: https://dirsigler.github.io/uptime-kuma-helm
   - name: prometheus-community
     url: https://prometheus-community.github.io/helm-charts
+  - name: tomy0000000
+    url: https://charts.tomy.me
 
 releases:
   ## Platform: shared services every app depends on.
@@ -143,3 +145,26 @@ releases:
       - monitoring/kube-prometheus-stack
     values:
       - apps/values/kube-prometheus-stack.yaml.gotmpl
+
+  # mcp-email-server behind its token-checking Caddy sidecar, reading the mailcow mailbox over IMAP
+  - name: email-mcp
+    namespace: email-mcp
+    chart: tomy0000000/email-mcp
+    version: 0.1.1
+    needs:
+      - gateway/cluster-config
+    # Renders ExternalSecrets, absent until ESO lands
+    disableValidationOnInstall: true
+    values:
+      - apps/values/email-mcp.yaml.gotmpl
+
+  # Its HTTPRoute, from the same values file, so a failure elsewhere cannot block it
+  - name: email-mcp-route
+    namespace: email-mcp
+    chart: ./apps/charts/route
+    # Renders a kind another release installs, absent on an empty cluster
+    disableValidationOnInstall: true
+    needs:
+      - email-mcp/email-mcp
+    values:
+      - apps/values/email-mcp.yaml.gotmpl

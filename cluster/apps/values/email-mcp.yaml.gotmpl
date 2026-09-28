@@ -1,0 +1,82 @@
+# Ingress host and the server's DNS-rebinding allowlist, so it must be what clients connect to.
+host: mcp-mail.{{ .Values.zones.main }}
+
+# The route release attaches it to the shared Gateway instead.
+ingress:
+  enabled: false
+
+server:
+  resources:
+    requests:
+      cpu: 25m
+      memory: 128Mi
+
+proxy:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+
+# Retain: an uninstall keeps the DO volume and the mailbox index cache in it. 1Gi is the DO minimum.
+persistence:
+  storageClass: do-block-storage-retain
+  size: 1Gi
+
+# The shared token the proxy checks, from 1Password.
+auth:
+  existingSecret: email-mcp-token
+  existingSecretKey: token
+
+# The mailbox, on the mailcow host over the public internet. Login and app password come from 1Password.
+account:
+  imap:
+    host: {{ .Values.instances.mailcow.hostname }}
+    port: 993
+  existingSecret: email-mcp-imap
+
+extraObjects:
+  - apiVersion: external-secrets.io/v1
+    kind: ExternalSecret
+    metadata:
+      name: email-mcp-token
+    spec:
+      refreshInterval: 1h
+      secretStoreRef:
+        kind: ClusterSecretStore
+        name: onepassword
+      target:
+        name: email-mcp-token
+        creationPolicy: Owner
+      data:
+        - secretKey: token
+          remoteRef:
+            key: {{ dig "kubernetes" "name" "" .Values }}-email_mcp-token/credential
+  - apiVersion: external-secrets.io/v1
+    kind: ExternalSecret
+    metadata:
+      name: email-mcp-imap
+    spec:
+      refreshInterval: 1h
+      secretStoreRef:
+        kind: ClusterSecretStore
+        name: onepassword
+      target:
+        name: email-mcp-imap
+        creationPolicy: Owner
+      data:
+        - secretKey: username
+          remoteRef:
+            key: {{ dig "kubernetes" "name" "" .Values }}-mailcow-email_mcp/username
+        - secretKey: password
+          remoteRef:
+            key: {{ dig "kubernetes" "name" "" .Values }}-mailcow-email_mcp/credential
+
+# Read by the email-mcp-route release, ignored by the chart above.
+# The whole host, not just /mcp: the claude.ai form lives at /<token>/mcp.
+httpRoute:
+  hostnames:
+    - mcp-mail.{{ .Values.zones.main }}
+  service: email-mcp
+  port: 80
+  # SSE responses of MCP tool calls outlive Envoy's 15s default.
+  requestTimeout: 0s

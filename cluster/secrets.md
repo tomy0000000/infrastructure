@@ -71,3 +71,44 @@ kube-prometheus-stack-grafana`.
 
 An existing Cloudflare token can be edited in place to add a permission or a
 zone, so widening access does not mean a new item.
+
+## `<cluster>-email_mcp-token`
+
+Shared token the Caddy sidecar in front of mcp-email-server checks on every
+request to `mcp-mail.<zone>`. Becomes `email-mcp-token` in the `email-mcp`
+namespace.
+
+1. In 1Password, in `Develop`: **New Item** → **API Credential**, title
+   `<cluster>-email_mcp-token`
+2. Generate a password into **credential**. Letters and digits only, 32 or
+   more characters: it is also a URL path segment
+   (`https://mcp-mail.<zone>/<token>/mcp`), the form claude.ai connects with
+
+The proxy reads it into an environment variable at start, so a rotated token
+takes effect only after `kubectl -n email-mcp rollout restart deployment
+email-mcp`. It invalidates every client at once: update the claude.ai
+connector and `claude mcp add --header` registrations with the new value.
+
+## `<cluster>-mailcow-email_mcp`
+
+The mailbox mcp-email-server logs into over IMAP. Becomes `email-mcp-imap` in
+the `email-mcp` namespace, with the mailbox address as `username` and the app
+password as `password`.
+
+1. In the mailcow web UI at `instances.mailcow.hostname`, log in as the
+   mailbox → **App passwords** → **Create app password**
+2. Name it (e.g. `email-mcp production`)
+3. Tick **IMAP** only. Leave SMTP, POP3, EAS, DAV and Sieve unticked: the
+   server then cannot send mail or touch Sieve rules no matter what it is
+   asked
+4. Create it here, in the web UI. App passwords made through the mailcow API
+   have been reported to land without their protocols and fail IMAP login
+   until re-saved in the UI
+5. In 1Password, in `Develop`: **New Item** → **API Credential**, title
+   `<cluster>-mailcow-email_mcp`
+6. Set **username** to the mailbox address (e.g. `tomy@<zone>`), and paste
+   the app password into **credential**
+
+The server reads both keys into environment variables at start, so a rotated
+password takes effect only after `kubectl -n email-mcp rollout restart
+deployment email-mcp`.

@@ -16,8 +16,9 @@ the cluster, helmfile owns what is inside it.
   app is two releases reading one values file: the chart, and `charts/route`,
   a local chart rendering the HTTPRoute that attaches it to the shared Gateway.
   Separate releases, so one app failing cannot block another's route. Today:
-  Uptime Kuma at `kuma.<zone>`, and kube-prometheus-stack with its Grafana at
-  `metrics.<zone>`.
+  Uptime Kuma at `kuma.<zone>`, kube-prometheus-stack with its Grafana at
+  `metrics.<zone>`, and email-mcp, an MCP server over the mailcow mailbox,
+  at `mcp-mail.<zone>`.
 
 ## Environments
 
