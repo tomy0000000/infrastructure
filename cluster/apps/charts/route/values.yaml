@@ -5,3 +5,4 @@ httpRoute:
   hostnames: []
   service: ""
   port: 0
+  requestTimeout: ""

@@ -20,3 +20,7 @@ spec:
     - backendRefs:
         - name: {{ required "httpRoute.service is required" .Values.httpRoute.service }}
           port: {{ required "httpRoute.port is required" .Values.httpRoute.port }}
+{{- with .Values.httpRoute.requestTimeout }}
+      timeouts:
+        request: {{ . | quote }}
+{{- end }}
