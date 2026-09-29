@@ -12,7 +12,8 @@ the cluster, helmfile owns what is inside it.
   chart ships. Today: the `eg` GatewayClass that binds Gateways to Envoy Gateway,
   the one `shared` Gateway every app attaches routes to, since each Gateway
   costs a DigitalOcean load balancer, and the Origin CA issuer with the wildcard
-  certificate its HTTPS listener serves.
+  certificate its HTTPS listener serves. And `charts/postgres`, the shared
+  Postgres cluster `main` with its backups to R2.
 - `apps/` third-party charts whose versions are pinned and bumped by hand. Each
   app is two releases reading one values file: the chart, and `charts/route`,
   a local chart rendering the HTTPRoute that attaches it to the shared Gateway.
@@ -87,6 +88,24 @@ The account is on the Family plan: 1,000 reads per hour per token and 1,000
 reads per day across the account. So `refreshInterval` on an ExternalSecret is
 `1h`, never the `1m` in upstream examples, which alone would burn the daily
 budget on one secret.
+
+## Postgres
+
+Apps share one CloudNativePG cluster, `main` in the `postgres` namespace, each
+with its own database and role. Its Services are ClusterIP only, so apps
+reach it at `main-rw.postgres.svc:5432` and nothing outside the cluster can.
+
+The barman-cloud plugin archives WAL continuously and takes a base backup
+daily into the `buckets.postgres` R2 bucket, under the folder `serverName`
+names, and prunes both past 30 days.
+
+`kubectl cnpg status main -n postgres` shows health, WAL archiving and the
+last backup. To connect:
+
+```
+kubectl cnpg psql main -n postgres                      # superuser, inside the pod
+kubectl -n postgres port-forward svc/main-rw 5432:5432  # from this machine
+```
 
 ## Restore
 

@@ -72,6 +72,24 @@ kube-prometheus-stack-grafana`.
 An existing Cloudflare token can be edited in place to add a permission or a
 zone, so widening access does not mean a new item.
 
+## `<cluster>-cloudflare-postgres_backup`
+
+R2 S3 key the barman-cloud plugin writes base backups and WAL with. Becomes
+`r2-backup` in the `postgres` namespace, with the Access Key ID as
+`accessKeyId` and the Secret Access Key as `secretAccessKey`.
+
+1. Go to [Cloudflare dashboard](https://dash.cloudflare.com) → **R2** →
+   **Manage API tokens** → **Create Account API token**
+2. Name it (e.g. `<Cluster Name> Postgres Backup`), pick **Object Read &
+   Write**, and under **Specify bucket(s)** apply it to `buckets.postgres.name`
+   only
+3. **Create API Token**, then copy the **Access Key ID** and **Secret Access
+   Key**. Cloudflare shows the secret only once
+4. In 1Password, in `Develop`: **New Item** → **API Credential**, title
+   `<cluster>-cloudflare-postgres_backup`
+5. Set **username** to the Access Key ID, and paste the Secret Access Key
+   into **credential**
+
 ## `<cluster>-email_mcp-token`
 
 Shared token the Caddy sidecar in front of mcp-email-server checks on every

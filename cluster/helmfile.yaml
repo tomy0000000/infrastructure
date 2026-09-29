@@ -104,6 +104,18 @@ releases:
     values:
       - platform/values/plugin-barman-cloud.yaml
 
+  # The shared Postgres every app gets a database in, archiving to R2
+  - name: postgres
+    namespace: postgres
+    chart: ./platform/charts/postgres
+    needs:
+      - cnpg-system/plugin-barman-cloud
+      - gateway/cluster-config
+    # Renders CNPG, barman-cloud and ESO kinds, absent on an empty cluster
+    disableValidationOnInstall: true
+    values:
+      - platform/values/postgres.yaml.gotmpl
+
   # Cluster-scoped objects no chart ships: GatewayClass, Gateway, ClusterSecretStore, issuer, wildcard cert
   - name: cluster-config
     namespace: gateway

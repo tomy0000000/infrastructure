@@ -1,0 +1,25 @@
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: r2
+spec:
+  retentionPolicy: 30d
+  configuration:
+    destinationPath: s3://{{ required "bucket is required" .Values.bucket }}/
+    endpointURL: https://{{ required "accountId is required" .Values.accountId }}.r2.cloudflarestorage.com
+    s3Credentials:
+      accessKeyId:
+        name: r2-backup
+        key: accessKeyId
+      secretAccessKey:
+        name: r2-backup
+        key: secretAccessKey
+    wal:
+      compression: gzip
+    data:
+      compression: gzip
+  instanceSidecarConfiguration:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
