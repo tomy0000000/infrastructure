@@ -32,6 +32,8 @@ take, so name it as a liability rather than accept it.
 - Terraform runs in CI (`.github/workflows/apply-<env>.yml`) with throwaway
   state: every run imports existing resources with
   `scripts/import-resources.sh`, then plans and applies.
+- `mise run terraform:plan <env>` does the same locally and saves
+  `<env>/tfplan`. `mise run terraform:apply <env>` applies only that file.
 
 ## Working agreement
 
