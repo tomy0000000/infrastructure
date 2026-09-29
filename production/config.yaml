@@ -20,6 +20,10 @@ buckets:
   misc:
     name: tomy-misc
     location: APAC
+  # CloudNativePG base backups and WAL archive
+  postgres:
+    name: tomy-postgres
+    location: WNAM
 
 # DOKS cluster
 kubernetes:

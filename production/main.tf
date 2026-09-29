@@ -44,6 +44,14 @@ module "r2_misc" {
   location    = local.buckets.misc.location
 }
 
+module "r2_postgres" {
+  source = "../template/r2"
+
+  account_id  = var.cloudflare_account_id
+  bucket_name = local.buckets.postgres.name
+  location    = local.buckets.postgres.location
+}
+
 module "doks" {
   source = "../template/doks"
 
