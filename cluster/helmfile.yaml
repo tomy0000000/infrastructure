@@ -91,6 +91,19 @@ releases:
     values:
       - platform/values/cloudnative-pg.yaml
 
+  # Backs up every Postgres cluster to object storage, in the operator's namespace as CNPG-I requires
+  - name: plugin-barman-cloud
+    namespace: cnpg-system
+    chart: cnpg/plugin-barman-cloud
+    version: 0.8.0
+    needs:
+      - cert-manager/cert-manager
+      - cnpg-system/cloudnative-pg
+    # Renders cert-manager kinds, absent on an empty cluster
+    disableValidationOnInstall: true
+    values:
+      - platform/values/plugin-barman-cloud.yaml
+
   # Cluster-scoped objects no chart ships: GatewayClass, Gateway, ClusterSecretStore, issuer, wildcard cert
   - name: cluster-config
     namespace: gateway
