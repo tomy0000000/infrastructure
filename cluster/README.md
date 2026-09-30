@@ -97,7 +97,8 @@ reach it at `main-rw.postgres.svc:5432` and nothing outside the cluster can.
 
 The barman-cloud plugin archives WAL continuously and takes a base backup
 daily into the `buckets.postgres` R2 bucket, under the folder `serverName`
-names, and prunes both past 30 days.
+names, and prunes both past 30 days. `recoverFrom` names the folder a newly
+created cluster restores from, see Restore.
 
 `kubectl cnpg status main -n postgres` shows health, WAL archiving and the
 last backup. To connect:
@@ -123,6 +124,13 @@ Cluster, if it is gone. The plan creates it from `production/config.yaml`:
 ```
 gh workflow run apply-production.yml && mise run kubeconfig production
 ```
+
+Postgres, if the `main` Cluster is gone. In
+`platform/values/postgres.yaml.gotmpl`, move the current `serverName` into
+`recoverFrom` and give `serverName` the next name (`main` becomes `main-2`),
+then commit. The new cluster restores the latest state from that folder and
+archives into the new one. Skipping this starts an empty database, and CNPG
+refuses to archive it into the old folder, so nothing in R2 is overwritten.
 
 Everything else. `instance/<env>.env` has to exist, see `instance/README.md`.
 `needs:` orders the releases and the presync hooks apply CRDs on the way in,

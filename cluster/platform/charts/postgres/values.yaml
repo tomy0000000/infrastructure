@@ -6,3 +6,5 @@ bucket: ""
 # Folder in the bucket this cluster archives to. CNPG refuses to archive into
 # one another cluster already wrote, so a restored cluster needs a new one.
 serverName: ""
+# Folder to restore from when the cluster is created. Empty starts a new database.
+recoverFrom: ""

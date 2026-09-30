@@ -21,3 +21,16 @@ spec:
       parameters:
         barmanObjectName: r2
         serverName: {{ required "serverName is required" .Values.serverName }}
+  {{- with .Values.recoverFrom }}
+  # Read only when the cluster is created, ignored afterwards.
+  bootstrap:
+    recovery:
+      source: origin
+  externalClusters:
+    - name: origin
+      plugin:
+        name: barman-cloud.cloudnative-pg.io
+        parameters:
+          barmanObjectName: r2
+          serverName: {{ . }}
+  {{- end }}

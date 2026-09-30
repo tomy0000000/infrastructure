@@ -2,3 +2,4 @@ cluster: {{ dig "kubernetes" "name" "" .Values }}
 accountId: {{ requiredEnv "TF_VAR_cloudflare_account_id" }}
 bucket: {{ .Values.buckets.postgres.name }}
 serverName: main
+recoverFrom: ""
