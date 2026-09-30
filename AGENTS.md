@@ -19,6 +19,8 @@ take, so name it as a liability rather than accept it.
 - `instance/` per-environment env files, gitignored, documented in its
   `README.md`.
 - `scripts/` mise tasks. `mise tasks` lists them.
+- `runbooks/` step-by-step procedures a person runs by hand, one directory
+  each, named in kebab-case: a `README.md` and the manifests it applies.
 - `tmp-for-ref-will-be-rm/` scratch and old experiments. Not part of the
   procedure, do not build on it.
 

@@ -1,0 +1,26 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: drill
+  namespace: postgres
+spec:
+  instances: 1
+  # Same major version as main.
+  imageName: ghcr.io/cloudnative-pg/postgresql:18.6-standard-trixie
+  storage:
+    size: 5Gi
+    storageClass: do-block-storage
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+  bootstrap:
+    recovery:
+      source: origin
+  externalClusters:
+    - name: origin
+      plugin:
+        name: barman-cloud.cloudnative-pg.io
+        parameters:
+          barmanObjectName: r2
+          serverName: main
