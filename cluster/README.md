@@ -105,7 +105,7 @@ last backup. To connect:
 
 ```
 kubectl cnpg psql main -n postgres                      # superuser, inside the pod
-kubectl -n postgres port-forward svc/main-rw 5432:5432  # from this machine
+mise run pg-forward                                     # localhost:15432, from this machine
 ```
 
 ## Restore
