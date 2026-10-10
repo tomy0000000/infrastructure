@@ -107,6 +107,16 @@ CNPG applies a changed password to the role within the hour, when ESO refreshes
 the Secret. The app only reads its URL at start, so follow a rotation with a
 restart of the app's Deployment.
 
+## `<cluster>-cloudflare-clickhouse_backup`
+
+R2 S3 key ClickHouse writes its backups with. Becomes `r2-backup` in the
+`plausible` namespace, with the Access Key ID as `accessKeyId` and the Secret
+Access Key as `secretAccessKey`.
+
+Same steps as `<cluster>-cloudflare-postgres_backup`, with the token named
+`<Cluster Name> ClickHouse Backup`, applied to `buckets.clickhouse.name` only,
+and the 1Password item titled `<cluster>-cloudflare-clickhouse_backup`.
+
 ## `<cluster>-email_mcp-token`
 
 Shared token the Caddy sidecar in front of mcp-email-server checks on every

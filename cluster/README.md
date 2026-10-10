@@ -116,6 +116,21 @@ kubectl cnpg psql main -n postgres                      # superuser, inside the 
 mise run pg-forward                                     # localhost:15432, from this machine
 ```
 
+## ClickHouse
+
+Plausible's events live in their own ClickHouse, release `clickhouse` in the
+`plausible` namespace, from the `tomy0000000/clickhouse` chart. A CronJob has
+the server take a full backup of `plausible_events_db` into the
+`buckets.clickhouse` R2 bucket every night, one folder per run under
+`plausible_events_db/`. The bucket's lifecycle rule expires them after 30
+days. `backup.recoverFrom` names the folder a newly installed release restores
+from, see Restore.
+
+```
+kubectl -n plausible get cronjob,job                    # schedule and the last runs
+kubectl -n plausible exec -it clickhouse-0 -- clickhouse-client
+```
+
 ## Restore
 
 Copy-paste, top to bottom. Swap `production` for `staging` for the other
@@ -139,6 +154,14 @@ Postgres, if the `main` Cluster is gone. In
 then commit. The new cluster restores the latest state from that folder and
 archives into the new one. Skipping this starts an empty database, and CNPG
 refuses to archive it into the old folder, so nothing in R2 is overwritten.
+
+ClickHouse, if the `clickhouse` release and its volume are gone. In
+`apps/values/clickhouse.yaml.gotmpl`, set `backup.recoverFrom` to the newest
+folder under `plausible_events_db/` in the bucket, as the Cloudflare dashboard
+lists it, as a full URL like `https://<account>.r2.cloudflarestorage.com/
+tomy-clickhouse/plausible_events_db/20261010T030000Z`, then commit. The
+install's post-install hook restores it before Plausible starts. Leaving it
+empty starts an empty events database.
 
 Everything else. `instance/<env>.env` has to exist, see `instance/README.md`.
 `needs:` orders the releases and the presync hooks apply CRDs on the way in,

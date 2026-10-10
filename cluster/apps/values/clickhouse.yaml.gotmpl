@@ -80,3 +80,36 @@ usersFiles:
             </default>
         </profiles>
     </clickhouse>
+
+# Daily full backup of the events into R2, pruned by the bucket's lifecycle rule.
+# Each run lands in <bucket>/plausible_events_db/<UTC timestamp>.
+backup:
+  enabled: true
+  schedule: "0 3 * * *"
+  url: https://{{ requiredEnv "TF_VAR_cloudflare_account_id" }}.r2.cloudflarestorage.com/{{ .Values.buckets.clickhouse.name }}
+  databases:
+    - plausible_events_db
+  existingSecret: r2-backup
+  # Folder to restore when the release is first installed. Empty starts empty.
+  recoverFrom: ""
+
+extraObjects:
+  - apiVersion: external-secrets.io/v1
+    kind: ExternalSecret
+    metadata:
+      name: r2-backup
+    spec:
+      refreshInterval: 1h
+      secretStoreRef:
+        kind: ClusterSecretStore
+        name: onepassword
+      target:
+        name: r2-backup
+        creationPolicy: Owner
+      data:
+        - secretKey: accessKeyId
+          remoteRef:
+            key: {{ dig "kubernetes" "name" "" .Values }}-cloudflare-clickhouse_backup/username
+        - secretKey: secretAccessKey
+          remoteRef:
+            key: {{ dig "kubernetes" "name" "" .Values }}-cloudflare-clickhouse_backup/credential
