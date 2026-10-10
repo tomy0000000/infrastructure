@@ -52,6 +52,14 @@ module "r2_postgres" {
   location    = local.buckets.postgres.location
 }
 
+module "r2_clickhouse" {
+  source = "../template/r2"
+
+  account_id  = var.cloudflare_account_id
+  bucket_name = local.buckets.clickhouse.name
+  location    = local.buckets.clickhouse.location
+}
+
 module "doks" {
   source = "../template/doks"
 

@@ -24,6 +24,10 @@ buckets:
   postgres:
     name: tomy-postgres
     location: WNAM
+  # ClickHouse backups of the Plausible events database
+  clickhouse:
+    name: tomy-clickhouse
+    location: WNAM
 
 # DOKS cluster
 kubernetes:
