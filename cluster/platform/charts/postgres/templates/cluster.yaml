@@ -21,6 +21,17 @@ spec:
       parameters:
         barmanObjectName: r2
         serverName: {{ required "serverName is required" .Values.serverName }}
+  {{- with .Values.databases }}
+  managed:
+    roles:
+    {{- range . }}
+      - name: {{ . }}
+        ensure: present
+        login: true
+        passwordSecret:
+          name: main-{{ . }}
+    {{- end }}
+  {{- end }}
   {{- with .Values.recoverFrom }}
   # Read only when the cluster is created, ignored afterwards.
   bootstrap:

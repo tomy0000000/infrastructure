@@ -90,6 +90,23 @@ R2 S3 key the barman-cloud plugin writes base backups and WAL with. Becomes
 5. Set **username** to the Access Key ID, and paste the Secret Access Key
    into **credential**
 
+## `<cluster>-postgres-<app>`
+
+Password of the role `<app>` that owns the database `<app>` in the shared
+Postgres. Becomes `main-<app>` in the `postgres` namespace, in the
+`kubernetes.io/basic-auth` shape CNPG reads, and whatever the app's own
+`ExternalSecret` makes of it in the app's namespace.
+
+1. In 1Password, in `Develop`: **New Item** → **API Credential**, title
+   `<cluster>-postgres-<app>`
+2. Set **username** to `<app>`, the role name
+3. Generate a password into **credential**. Letters and digits only: it is
+   embedded in a `postgres://` URL unescaped
+
+CNPG applies a changed password to the role within the hour, when ESO refreshes
+the Secret. The app only reads its URL at start, so follow a rotation with a
+restart of the app's Deployment.
+
 ## `<cluster>-email_mcp-token`
 
 Shared token the Caddy sidecar in front of mcp-email-server checks on every

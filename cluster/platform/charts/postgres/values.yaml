@@ -8,3 +8,6 @@ bucket: ""
 serverName: ""
 # Folder to restore from when the cluster is created. Empty starts a new database.
 recoverFrom: ""
+# Apps that get a database of their own, owned by a login role of the same
+# name. The role's password is the 1Password item <cluster>-postgres-<name>.
+databases: []

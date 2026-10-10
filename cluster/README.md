@@ -95,6 +95,14 @@ Apps share one CloudNativePG cluster, `main` in the `postgres` namespace, each
 with its own database and role. Its Services are ClusterIP only, so apps
 reach it at `main-rw.postgres.svc:5432` and nothing outside the cluster can.
 
+An app gets its database by being listed under `databases` in
+`platform/values/postgres.yaml.gotmpl`. The chart renders a `Database` owned
+by a login role of the same name, and an `ExternalSecret` that feeds the role
+its password from the 1Password item `<cluster>-postgres-<name>`, see
+`secrets.md`. The app reads the same item from its own namespace to build its
+connection URL. Deleting the entry removes the role and leaves the database in
+place, CNPG's default.
+
 The barman-cloud plugin archives WAL continuously and takes a base backup
 daily into the `buckets.postgres` R2 bucket, under the folder `serverName`
 names, and prunes both past 30 days. `recoverFrom` names the folder a newly
