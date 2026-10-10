@@ -117,6 +117,10 @@ Same steps as `<cluster>-cloudflare-postgres_backup`, with the token named
 `<Cluster Name> ClickHouse Backup`, applied to `buckets.clickhouse.name` only,
 and the 1Password item titled `<cluster>-cloudflare-clickhouse_backup`.
 
+The server reads the key into its environment at start, so a rotated key
+takes effect only after `kubectl -n plausible rollout restart statefulset
+clickhouse`, a restart of a minute or so.
+
 ## `<cluster>-email_mcp-token`
 
 Shared token the Caddy sidecar in front of mcp-email-server checks on every

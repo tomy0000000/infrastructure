@@ -208,7 +208,7 @@ releases:
   - name: clickhouse
     namespace: plausible
     chart: tomy0000000/clickhouse
-    version: 0.2.0
+    version: 0.3.0
     # Renders an ExternalSecret, absent until ESO lands
     disableValidationOnInstall: true
     needs:
