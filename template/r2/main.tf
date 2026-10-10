@@ -20,14 +20,21 @@ resource "cloudflare_r2_bucket_cors" "this" {
 resource "cloudflare_r2_bucket_lifecycle" "this" {
   account_id  = var.account_id
   bucket_name = cloudflare_r2_bucket.this.name
-  rules = [{
+  rules = concat([{
     id         = "Auto abort stale upload"
     enabled    = true
     conditions = { prefix = "" }
     abort_multipart_uploads_transition = {
       condition = { type = "Age", max_age = 604800 } # 7 days
     }
-  }]
+    }], var.expire_after_days == null ? [] : [{
+    id         = "Expire old objects"
+    enabled    = true
+    conditions = { prefix = "" }
+    delete_objects_transition = {
+      condition = { type = "Age", max_age = var.expire_after_days * 86400 }
+    }
+  }])
 }
 
 resource "cloudflare_r2_custom_domain" "this" {

@@ -24,10 +24,11 @@ buckets:
   postgres:
     name: tomy-postgres
     location: WNAM
-  # ClickHouse backups of the Plausible events database
+  # ClickHouse backups of the Plausible events database, a full one a day
   clickhouse:
     name: tomy-clickhouse
     location: WNAM
+    expire_after_days: 30
 
 # DOKS cluster
 kubernetes:

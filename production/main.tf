@@ -55,9 +55,10 @@ module "r2_postgres" {
 module "r2_clickhouse" {
   source = "../template/r2"
 
-  account_id  = var.cloudflare_account_id
-  bucket_name = local.buckets.clickhouse.name
-  location    = local.buckets.clickhouse.location
+  account_id        = var.cloudflare_account_id
+  bucket_name       = local.buckets.clickhouse.name
+  location          = local.buckets.clickhouse.location
+  expire_after_days = local.buckets.clickhouse.expire_after_days
 }
 
 module "doks" {

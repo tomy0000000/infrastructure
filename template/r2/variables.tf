@@ -28,3 +28,9 @@ variable "bucket_hosts" {
   description = "Custom domains serving the bucket, each with the zone it belongs to. Empty means none is managed"
   default     = []
 }
+
+variable "expire_after_days" {
+  type        = number
+  description = "Delete objects this many days after upload. Null keeps them forever"
+  default     = null
+}
