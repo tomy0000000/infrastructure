@@ -203,3 +203,11 @@ releases:
       - email-mcp/email-mcp
     values:
       - apps/values/email-mcp.yaml.gotmpl
+
+  # ClickHouse for Plausible's events, tuned with the files Plausible CE ships
+  - name: clickhouse
+    namespace: plausible
+    chart: tomy0000000/clickhouse
+    version: 0.1.0
+    values:
+      - apps/values/clickhouse.yaml
