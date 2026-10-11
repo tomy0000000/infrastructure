@@ -215,3 +215,28 @@ releases:
       - gateway/cluster-config
     values:
       - apps/values/clickhouse.yaml.gotmpl
+
+  # Plausible CE on the shared Postgres and the ClickHouse above. Keys and the Postgres URL from 1Password
+  - name: plausible
+    namespace: plausible
+    chart: tomy0000000/plausible
+    version: 0.1.1
+    # Renders an ExternalSecret, absent until ESO lands
+    disableValidationOnInstall: true
+    needs:
+      - gateway/cluster-config
+      - postgres/postgres
+      - plausible/clickhouse
+    values:
+      - apps/values/plausible.yaml.gotmpl
+
+  # Its HTTPRoute, from the same values file, so a failure elsewhere cannot block it
+  - name: plausible-route
+    namespace: plausible
+    chart: ./apps/charts/route
+    # Renders a kind another release installs, absent on an empty cluster
+    disableValidationOnInstall: true
+    needs:
+      - plausible/plausible
+    values:
+      - apps/values/plausible.yaml.gotmpl

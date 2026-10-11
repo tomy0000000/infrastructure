@@ -19,8 +19,9 @@ the cluster, helmfile owns what is inside it.
   a local chart rendering the HTTPRoute that attaches it to the shared Gateway.
   Separate releases, so one app failing cannot block another's route. Today:
   Uptime Kuma at `kuma.<zone>`, kube-prometheus-stack with its Grafana at
-  `metrics.<zone>`, and email-mcp, an MCP server over the mailcow mailbox,
-  at `mcp-mail.<zone>`.
+  `metrics.<zone>`, email-mcp, an MCP server over the mailcow mailbox, at
+  `mcp-mail.<zone>`, and Plausible at `a.<zone>`, with its ClickHouse beside
+  it in the same namespace.
 
 ## Environments
 

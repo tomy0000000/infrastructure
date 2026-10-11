@@ -121,6 +121,25 @@ The server reads the key into its environment at start, so a rotated key
 takes effect only after `kubectl -n plausible rollout restart statefulset
 clickhouse`, a restart of a minute or so.
 
+## `<cluster>-plausible-secret_key_base` and `<cluster>-plausible-totp_vault_key`
+
+The two keys Plausible derives everything from: dashboard sessions and
+e-mail tokens from the first, the encryption of every user's 2FA secret from
+the second. Both become keys of `plausible` in the `plausible` namespace,
+along with the Postgres URL composed from `<cluster>-postgres-plausible`.
+
+1. In 1Password, in `Develop`: **New Item** → **API Credential**, title
+   `<cluster>-plausible-secret_key_base`
+2. Into **credential**, paste the `SECRET_KEY_BASE` the instance already runs
+   with. For a brand new instance, `openssl rand -base64 48`
+3. Again for `<cluster>-plausible-totp_vault_key`, with `TOTP_VAULT_KEY`, or
+   `openssl rand -base64 32` for a new instance
+
+Changing either logs everyone out, and changing the second locks every user
+with 2FA out for good. Rotation is not a thing here, so these items are
+written once. The pod reads them at start:
+`kubectl -n plausible rollout restart deployment plausible`.
+
 ## `<cluster>-email_mcp-token`
 
 Shared token the Caddy sidecar in front of mcp-email-server checks on every

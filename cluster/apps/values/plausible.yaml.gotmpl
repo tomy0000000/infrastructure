@@ -1,0 +1,46 @@
+baseURL: https://a.{{ .Values.zones.main }}
+
+# Keys and the Postgres URL, composed by the ExternalSecret below.
+existingSecret: plausible
+
+env:
+  # Its own ClickHouse, the clickhouse release in this namespace. No password: the NetworkPolicy fences it.
+  CLICKHOUSE_DATABASE_URL: http://clickhouse.plausible.svc:8123/plausible_events_db
+  DISABLE_REGISTRATION: invite_only
+
+extraObjects:
+  - apiVersion: external-secrets.io/v1
+    kind: ExternalSecret
+    metadata:
+      name: plausible
+    spec:
+      refreshInterval: 1h
+      secretStoreRef:
+        kind: ClusterSecretStore
+        name: onepassword
+      target:
+        name: plausible
+        creationPolicy: Owner
+        # Rendered by ESO. Written as {{ `{{ "{{ .x }}" }}` }} so it survives helmfile, then the chart's tpl.
+        template:
+          data:
+            SECRET_KEY_BASE: {{ `{{ "{{ .secretKeyBase }}" }}` | quote }}
+            TOTP_VAULT_KEY: {{ `{{ "{{ .totpVaultKey }}" }}` | quote }}
+            DATABASE_URL: {{ `{{ "postgres://plausible:{{ .password }}@main-rw.postgres.svc:5432/plausible" }}` | quote }}
+      data:
+        - secretKey: secretKeyBase
+          remoteRef:
+            key: {{ dig "kubernetes" "name" "" .Values }}-plausible-secret_key_base/credential
+        - secretKey: totpVaultKey
+          remoteRef:
+            key: {{ dig "kubernetes" "name" "" .Values }}-plausible-totp_vault_key/credential
+        - secretKey: password
+          remoteRef:
+            key: {{ dig "kubernetes" "name" "" .Values }}-postgres-plausible/credential
+
+# Read by the plausible-route release, ignored by the chart above.
+httpRoute:
+  hostnames:
+    - a.{{ .Values.zones.main }}
+  service: plausible
+  port: 80
