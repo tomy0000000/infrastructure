@@ -194,3 +194,146 @@ password as `password`.
 The server reads both keys into environment variables at start, so a rotated
 password takes effect only after `kubectl -n email-mcp rollout restart
 deployment email-mcp`.
+
+## `<cluster>-remark42-secret`
+
+The key remark42 signs every session cookie with. Becomes `SECRET` in
+`remark42-credentials` in the `remark42` namespace, as do the four items
+below, each under the variable it names.
+
+The GitHub, Google and Slack apps below each take the remark42 logo, the 512
+px square `site/static/android-chrome-512x512.png` in its repo:
+
+```
+curl -sLo remark42-logo.png https://raw.githubusercontent.com/umputun/remark42/master/site/static/android-chrome-512x512.png
+```
+
+1. In 1Password, in `Develop`: **New Item** → **API Credential**, title
+   `<cluster>-remark42-secret`
+2. Into **credential**, paste `openssl rand -base64 64 | tr -d '\n'`
+
+Nothing on disk is encrypted with it, so rotation is safe: every commenter is
+signed out once, and an anonymous commenter gets their identity back by typing
+the same name. remark42 reads this whole group at start, so a rotated value
+takes effect only after `kubectl -n remark42 rollout restart deployment
+remark42`.
+
+## `<cluster>-github-remark42_oauth`
+
+The GitHub OAuth app commenters sign in with. Becomes `AUTH_GITHUB_CID` from
+**username** and `AUTH_GITHUB_CSEC` from **credential**.
+
+1. Go to [GitHub](https://github.com/settings/developers) → **OAuth Apps** →
+   **New OAuth App**
+2. Set **Application name** (e.g. `Remark42`), **Homepage URL** to
+   `https://remark42.<zone>`, and **Redirect URI** to
+   `https://remark42.<zone>/auth/github/callback`
+3. **Register application**
+4. Under **Application logo**, **Upload new logo** → pick `remark42-logo.png`
+   → **Set new application logo**
+5. **Generate a new client secret**, then copy it. GitHub shows the secret
+   only once
+6. In 1Password, in `Develop`: **New Item** → **API Credential**, title
+   `<cluster>-github-remark42_oauth`
+7. Set **username** to the **Client ID**, and paste the client secret into
+   **credential**
+
+User IDs derive from the GitHub account, not the app, so a replacement app
+keeps every existing commenter and the admins in `settings.admin.sharedId`.
+
+## `<cluster>-google-remark42_oauth`
+
+The Google OAuth client commenters sign in with. Becomes `AUTH_GOOGLE_CID`
+from **username** and `AUTH_GOOGLE_CSEC` from **credential**.
+
+1. Go to [Google Cloud console](https://console.cloud.google.com) → create a
+   project, or pick one, then **APIs & Services** → **OAuth consent screen**
+2. Pick [**Branding**](https://console.cloud.google.com/auth/branding) and
+   fill the form:
+   - **App name**: `Remark42`
+   - **User support email**: The dropdown only offers the account's own addresses
+   - **App logo**: `remark42-logo.png`. Google shows it on the consent
+     screen only after brand verification, sign-in works either way
+   - **Application home page**: `https://remark42.<zone>/web/`
+   - **Application privacy policy link**:
+     `https://remark42.<zone>/web/privacy.html`
+   - **Authorized domain 1**: `<zone>`
+   - **Developer contact information**: Your email address
+
+   Save with no scopes, then **Publish app** so people outside the test list
+   can sign in
+
+3. [**Clients**](https://console.cloud.google.com/auth/clients) →
+   **Create client** and fill the form:
+   - **Application type**: `Web application`
+   - **Name**: `<cluster>-google-remark42_oauth`, the 1Password item's title,
+     so the two find each other. Not shown to end users
+   - **Authorized JavaScript origins**, URIs 1: `https://remark42.<zone>`
+   - **Authorized redirect URIs**, URIs 1:
+     `https://remark42.<zone>/auth/google/callback`
+
+   **Create**. The settings can take from five minutes to a few hours to
+   take effect
+
+4. Copy the **Client ID** and **Client secret** now. Google hides the secret
+   once the dialog closes
+5. In 1Password, in `Develop`: **New Item** → **API Credential**, title
+   `<cluster>-google-remark42_oauth`
+6. Set **username** to the client ID, and paste the client secret into
+   **credential**
+
+## `<cluster>-slack-remark42_notify`
+
+The bot token admin notifications post to Slack with. Becomes
+`NOTIFY_SLACK_TOKEN`. The channel is `settings.notify.slack.channel` in
+`apps/values/remark42.yaml.gotmpl`, not a secret.
+
+1. Go to [Slack API](https://api.slack.com/apps) → **Create New App** →
+   **From an app manifest**, pick the workspace, and paste this as the
+   manifest.
+
+   ```json
+   {
+     "display_information": {
+       "background_color": "#2056b4",
+       "description": "Comment engine",
+       "name": "Remark42"
+     },
+     "features": {
+       "bot_user": {
+         "always_online": false,
+         "display_name": "Remark42"
+       }
+     },
+     "oauth_config": {
+       "scopes": {
+         "bot": ["chat:write", "chat:write.public", "channels:read"]
+       }
+     }
+   }
+   ```
+
+2. **Next**, then **Create and Install** → **Allow** → **Go to App Settings**
+3. **Basic Information** → under **Display Information**, **Add App Icon**
+   → pick `remark42-logo.png`. 512 px is the minimum Slack accepts, which
+   this file meets exactly
+4. Under **Install App**, copy the **Bot User OAuth Token**, the one starting with `xoxb-`
+5. In 1Password, in `Develop`: **New Item** → **API Credential**, title
+   `<cluster>-slack-remark42_notify`, paste the token into **credential**
+
+## `<cluster>-mailcow-remark42`
+
+The mailbox remark42 sends reply notifications and e-mail verifications from,
+over SMTP. Becomes `SMTP_USERNAME` from **username** and `SMTP_PASSWORD` from
+**credential**. The same address is `settings.notify.email.fromAddress` and
+`settings.admin.sharedEmail` in the values file.
+
+1. In the mailcow web UI at `https://mailcow.<zone>/admin/mailbox` → **Add mailbox** with Username: `remark@<zone>` if it does not exist, then **Login** as it
+2. **App passwords** → **Create app password**
+3. Name it (e.g. `<cluster>-mailcow-remark42`)
+4. Tick **SMTP** only. Leave IMAP, POP3, EAS, DAV and Sieve unticked: the
+   pod can then send mail and nothing else → **Add**
+5. In 1Password, in `Develop`: **New Item** → **API Credential**, title
+   `<cluster>-mailcow-remark42`
+6. Set **username** to `remark@<zone>`, and paste the app password into
+   **credential**
