@@ -140,6 +140,20 @@ with 2FA out for good. Rotation is not a thing here, so these items are
 written once. The pod reads them at start:
 `kubectl -n plausible rollout restart deployment plausible`.
 
+## `<cluster>-maxmind-plausible_analytics`
+
+MaxMind license key Plausible downloads the GeoLite2 City database with at
+every start, for city and region on the dashboard instead of country alone.
+Becomes `MAXMIND_LICENSE_KEY` in the `plausible` Secret.
+
+1. Go to [MaxMind](https://www.maxmind.com/en/accounts/current/license-key)
+   → **Manage License Keys** → **Generate new license key**
+2. In 1Password, in `Develop`: **New Item** → **API Credential**, title
+   `<cluster>-maxmind-plausible_analytics`, paste the key into **credential**
+
+Plausible reads it at start, so a rotated key takes effect after
+`kubectl -n plausible rollout restart deployment plausible`.
+
 ## `<cluster>-email_mcp-token`
 
 Shared token the Caddy sidecar in front of mcp-email-server checks on every

@@ -27,6 +27,8 @@ extraObjects:
             SECRET_KEY_BASE: {{ `{{ "{{ .secretKeyBase }}" }}` | quote }}
             TOTP_VAULT_KEY: {{ `{{ "{{ .totpVaultKey }}" }}` | quote }}
             DATABASE_URL: {{ `{{ "postgres://plausible:{{ .password }}@main-rw.postgres.svc:5432/plausible" }}` | quote }}
+            # City-level geolocation from GeoLite2, downloaded at start. Without it, countries only.
+            MAXMIND_LICENSE_KEY: {{ `{{ "{{ .maxmindLicenseKey }}" }}` | quote }}
       data:
         - secretKey: secretKeyBase
           remoteRef:
@@ -37,6 +39,9 @@ extraObjects:
         - secretKey: password
           remoteRef:
             key: {{ dig "kubernetes" "name" "" .Values }}-postgres-plausible/credential
+        - secretKey: maxmindLicenseKey
+          remoteRef:
+            key: {{ dig "kubernetes" "name" "" .Values }}-maxmind-plausible_analytics/credential
 
 # Read by the plausible-route release, ignored by the chart above.
 httpRoute:
