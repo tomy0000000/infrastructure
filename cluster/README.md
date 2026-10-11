@@ -20,8 +20,9 @@ the cluster, helmfile owns what is inside it.
   Separate releases, so one app failing cannot block another's route. Today:
   Uptime Kuma at `kuma.<zone>`, kube-prometheus-stack with its Grafana at
   `metrics.<zone>`, email-mcp, an MCP server over the mailcow mailbox, at
-  `mcp-mail.<zone>`, and Plausible at `a.<zone>`, with its ClickHouse beside
-  it in the same namespace.
+  `mcp-mail.<zone>`, Plausible at `a.<zone>`, with its ClickHouse beside it
+  in the same namespace, and remark42, the blog's comments, at
+  `remark42.<zone>`.
 
 ## Environments
 
@@ -130,6 +131,18 @@ from, see Restore.
 ```
 kubectl -n plausible get cronjob,job                    # schedule and the last runs
 kubectl -n plausible exec -it clickhouse-0 -- clickhouse-client
+```
+
+## remark42
+
+Comments live in BoltDB files, one per site, with avatars and pictures beside
+them, all on one `do-block-storage-retain` volume. remark42 writes a nightly
+export of the comments into that same volume and nowhere else, so the volume
+is the only copy: an uninstall keeps it, a region loss does not. Shipping it
+to R2 is still to do.
+
+```
+kubectl -n remark42 exec deploy/remark42 -- ls -la /srv/var /srv/var/backup
 ```
 
 ## Restore

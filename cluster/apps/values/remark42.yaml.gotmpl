@@ -1,0 +1,96 @@
+settings:
+  url: https://remark42.{{ .Values.zones.main }}
+  # Site IDs the blog and docs embed with. Each gets its own BoltDB file.
+  site: blog,docs
+  # Overridden by SECRET under env below. The chart refuses to render without a value here.
+  secretKey: overridden-by-env
+  timeZone: Asia/Taipei
+  admin:
+    sharedId: google_03913bad4e6da21dbe0bdb5ba0186b5589a2f3a4,github_fe33258cadbb4e14dd57e19f5ea8e86518413816
+    sharedEmail: remark@{{ .Values.zones.main }}
+  auth:
+    anonymous: true
+    # The widget is an iframe on another host, so its cookie must be cross-site.
+    sameSite: none
+  notify:
+    type:
+      user: email
+      admin: slack
+    slack:
+      channel: comment
+    email:
+      fromAddress: '"Tomy Hsieh"<remark@{{ .Values.zones.main }}>'
+
+# Credentials from 1Password, and the SMTP settings the chart only emits with its own SMTP secret.
+env:
+  - name: SMTP_HOST
+    value: {{ .Values.instances.mailcow.hostname }}
+  - name: SMTP_PORT
+    value: "587"
+  - name: SMTP_STARTTLS
+    value: "true"
+{{- range list "SECRET" "SMTP_USERNAME" "SMTP_PASSWORD" "AUTH_GITHUB_CID" "AUTH_GITHUB_CSEC" "AUTH_GOOGLE_CID" "AUTH_GOOGLE_CSEC" "NOTIFY_SLACK_TOKEN" }}
+  - name: {{ . }}
+    valueFrom:
+      secretKeyRef:
+        name: remark42-credentials
+        key: {{ . }}
+{{- end }}
+
+# Retain: an uninstall keeps the DO volume and the comments in it.
+storage:
+  requestedSize: 2Gi
+  className: do-block-storage-retain
+  keepPvc: true
+
+resources:
+  requests:
+    cpu: 25m
+    memory: 64Mi
+
+extraResources:
+  - apiVersion: external-secrets.io/v1
+    kind: ExternalSecret
+    metadata:
+      name: remark42-credentials
+    spec:
+      refreshInterval: 1h
+      secretStoreRef:
+        kind: ClusterSecretStore
+        name: onepassword
+      target:
+        name: remark42-credentials
+        creationPolicy: Owner
+      data:
+        - secretKey: SECRET
+          remoteRef:
+            key: {{ dig "kubernetes" "name" "" .Values }}-remark42-secret/credential
+        - secretKey: SMTP_USERNAME
+          remoteRef:
+            key: {{ dig "kubernetes" "name" "" .Values }}-mailcow-remark42/username
+        - secretKey: SMTP_PASSWORD
+          remoteRef:
+            key: {{ dig "kubernetes" "name" "" .Values }}-mailcow-remark42/credential
+        - secretKey: AUTH_GITHUB_CID
+          remoteRef:
+            key: {{ dig "kubernetes" "name" "" .Values }}-github-remark42_oauth/username
+        - secretKey: AUTH_GITHUB_CSEC
+          remoteRef:
+            key: {{ dig "kubernetes" "name" "" .Values }}-github-remark42_oauth/credential
+        - secretKey: AUTH_GOOGLE_CID
+          remoteRef:
+            key: {{ dig "kubernetes" "name" "" .Values }}-google-remark42_oauth/username
+        - secretKey: AUTH_GOOGLE_CSEC
+          remoteRef:
+            key: {{ dig "kubernetes" "name" "" .Values }}-google-remark42_oauth/credential
+        - secretKey: NOTIFY_SLACK_TOKEN
+          remoteRef:
+            key: {{ dig "kubernetes" "name" "" .Values }}-slack-remark42_notify/credential
+
+# Read by the remark42-route release. The chart's own HTTPRoute stays off.
+httpRoute:
+  enabled: false
+  hostnames:
+    - remark42.{{ .Values.zones.main }}
+  service: remark42
+  port: 80

@@ -22,6 +22,8 @@ repositories:
     url: https://charts.tomy.me
   - name: cnpg
     url: https://cloudnative-pg.github.io/charts
+  - name: groundhog2k
+    url: https://groundhog2k.github.io/helm-charts
 
 releases:
   ## Platform: shared services every app depends on.
@@ -240,3 +242,26 @@ releases:
       - plausible/plausible
     values:
       - apps/values/plausible.yaml.gotmpl
+
+  # remark42, the blog's comments, on one retained volume. Credentials from 1Password
+  - name: remark42
+    namespace: remark42
+    chart: groundhog2k/remark42
+    version: 0.11.5
+    # Renders an ExternalSecret, absent until ESO lands
+    disableValidationOnInstall: true
+    needs:
+      - gateway/cluster-config
+    values:
+      - apps/values/remark42.yaml.gotmpl
+
+  # Its HTTPRoute, from the same values file, so a failure elsewhere cannot block it
+  - name: remark42-route
+    namespace: remark42
+    chart: ./apps/charts/route
+    # Renders a kind another release installs, absent on an empty cluster
+    disableValidationOnInstall: true
+    needs:
+      - remark42/remark42
+    values:
+      - apps/values/remark42.yaml.gotmpl
