@@ -121,6 +121,19 @@ The server reads the key into its environment at start, so a rotated key
 takes effect only after `kubectl -n plausible rollout restart statefulset
 clickhouse`, a restart of a minute or so.
 
+## `<cluster>-cloudflare-remark42_backup`
+
+R2 S3 key the nightly remark42 backup job writes with. Becomes `r2-backup` in
+the `remark42` namespace, with the Access Key ID as `accessKeyId` and the
+Secret Access Key as `secretAccessKey`.
+
+Same steps as `<cluster>-cloudflare-postgres_backup`, with the token named
+`<Cluster Name> remark42 Backup`, applied to `buckets.remark42.name` only,
+and the 1Password item titled `<cluster>-cloudflare-remark42_backup`.
+
+Each run of the job reads the key fresh, so a rotated key is in use from the
+first run after ESO syncs it. Nothing to restart.
+
 ## `<cluster>-plausible-secret_key_base` and `<cluster>-plausible-totp_vault_key`
 
 The two keys Plausible derives everything from: dashboard sessions and
