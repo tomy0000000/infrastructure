@@ -61,6 +61,15 @@ module "r2_clickhouse" {
   expire_after_days = local.buckets.clickhouse.expire_after_days
 }
 
+module "r2_remark42" {
+  source = "../template/r2"
+
+  account_id        = var.cloudflare_account_id
+  bucket_name       = local.buckets.remark42.name
+  location          = local.buckets.remark42.location
+  expire_after_days = local.buckets.remark42.expire_after_days
+}
+
 module "doks" {
   source = "../template/doks"
 

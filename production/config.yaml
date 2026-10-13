@@ -29,6 +29,11 @@ buckets:
     name: tomy-clickhouse
     location: WNAM
     expire_after_days: 30
+  # Nightly copies of remark42's data directory, one folder per run
+  remark42:
+    name: tomy-backup-remark42
+    location: WNAM
+    expire_after_days: 30
 
 # DOKS cluster
 kubernetes:
