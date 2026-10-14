@@ -211,8 +211,8 @@ deployment email-mcp`.
 ## `<cluster>-remark42-secret`
 
 The key remark42 signs every session cookie with. Becomes `SECRET` in
-`remark42-credentials` in the `remark42` namespace, as do the four items
-below, each under the variable it names.
+`remark42-credentials` in the `remark42` namespace, as do the items below,
+each under the variable it names.
 
 The GitHub, Google and Slack apps below each take the remark42 logo, the 512
 px square `site/static/android-chrome-512x512.png` in its repo:
@@ -230,6 +230,17 @@ signed out once, and an anonymous commenter gets their identity back by typing
 the same name. remark42 reads this whole group at start, so a rotated value
 takes effect only after `kubectl -n remark42 rollout restart deployment
 remark42`.
+
+## `<cluster>-remark42-admin_password`
+
+The password of the built-in `admin` user, which remark42's own `backup` and
+`restore` commands authenticate with over HTTP basic auth. Becomes
+`ADMIN_PASSWD`. Setting it enables that login on the public URL, so it is
+long and random, and nothing but those two commands uses it.
+
+1. In 1Password, in `Develop`: **New Item** → **API Credential**, title
+   `<cluster>-remark42-admin_password`
+2. Into **credential**, paste `openssl rand -base64 48 | tr -d '\n'`
 
 ## `<cluster>-github-remark42_oauth`
 
