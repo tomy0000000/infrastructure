@@ -29,7 +29,7 @@ env:
     value: "587"
   - name: SMTP_STARTTLS
     value: "true"
-{{- range list "SECRET" "SMTP_USERNAME" "SMTP_PASSWORD" "AUTH_GITHUB_CID" "AUTH_GITHUB_CSEC" "AUTH_GOOGLE_CID" "AUTH_GOOGLE_CSEC" "NOTIFY_SLACK_TOKEN" }}
+{{- range list "SECRET" "ADMIN_PASSWD" "SMTP_USERNAME" "SMTP_PASSWORD" "AUTH_GITHUB_CID" "AUTH_GITHUB_CSEC" "AUTH_GOOGLE_CID" "AUTH_GOOGLE_CSEC" "NOTIFY_SLACK_TOKEN" }}
   - name: {{ . }}
     valueFrom:
       secretKeyRef:
@@ -65,6 +65,9 @@ extraResources:
         - secretKey: SECRET
           remoteRef:
             key: {{ dig "kubernetes" "name" "" .Values }}-remark42-secret/credential
+        - secretKey: ADMIN_PASSWD
+          remoteRef:
+            key: {{ dig "kubernetes" "name" "" .Values }}-remark42-admin_password/credential
         - secretKey: SMTP_USERNAME
           remoteRef:
             key: {{ dig "kubernetes" "name" "" .Values }}-mailcow-remark42/username
@@ -86,6 +89,96 @@ extraResources:
         - secretKey: NOTIFY_SLACK_TOKEN
           remoteRef:
             key: {{ dig "kubernetes" "name" "" .Values }}-slack-remark42_notify/credential
+
+  # The R2 key the nightly backup below writes with.
+  - apiVersion: external-secrets.io/v1
+    kind: ExternalSecret
+    metadata:
+      name: r2-backup
+    spec:
+      refreshInterval: 1h
+      secretStoreRef:
+        kind: ClusterSecretStore
+        name: onepassword
+      target:
+        name: r2-backup
+        creationPolicy: Owner
+      data:
+        - secretKey: accessKeyId
+          remoteRef:
+            key: {{ dig "kubernetes" "name" "" .Values }}-cloudflare-remark42_backup/username
+        - secretKey: secretAccessKey
+          remoteRef:
+            key: {{ dig "kubernetes" "name" "" .Values }}-cloudflare-remark42_backup/credential
+
+  # Ships remark42's own daily exports, with avatars and pictures, into R2: one folder per night, pruned by the bucket's lifecycle rule.
+  - apiVersion: batch/v1
+    kind: CronJob
+    metadata:
+      name: remark42-backup
+    spec:
+      schedule: "0 4 * * *"
+      concurrencyPolicy: Forbid
+      successfulJobsHistoryLimit: 1
+      failedJobsHistoryLimit: 3
+      jobTemplate:
+        spec:
+          backoffLimit: 2
+          template:
+            spec:
+              restartPolicy: Never
+              # The volume is ReadWriteOnce, which is a per-node limit: run on the node that has it mounted.
+              affinity:
+                podAffinity:
+                  requiredDuringSchedulingIgnoredDuringExecution:
+                    - topologyKey: kubernetes.io/hostname
+                      labelSelector:
+                        matchLabels:
+                          app.kubernetes.io/name: remark42
+                          app.kubernetes.io/instance: remark42
+              # The chart's user, the only one allowed into the avatar and picture directories.
+              securityContext:
+                runAsUser: 1001
+                runAsNonRoot: true
+                fsGroup: 1001
+              containers:
+                - name: rclone
+                  image: rclone/rclone:1.75.2
+                  command: ["/bin/sh", "-c"]
+                  args:
+                    - rclone copy /srv/var "r2:{{ .Values.buckets.remark42.name }}/$(date -u +%Y%m%dT%H%M%SZ)" --include 'backup/**' --include 'avatars/**' --include 'pictures/**' --stats-one-line -v
+                  env:
+                    - name: RCLONE_CONFIG_R2_TYPE
+                      value: s3
+                    - name: RCLONE_CONFIG_R2_PROVIDER
+                      value: Cloudflare
+                    - name: RCLONE_CONFIG_R2_ENDPOINT
+                      value: https://{{ requiredEnv "TF_VAR_cloudflare_account_id" }}.r2.cloudflarestorage.com
+                    # The key cannot create buckets, so skip the check that would try.
+                    - name: RCLONE_CONFIG_R2_NO_CHECK_BUCKET
+                      value: "true"
+                    - name: RCLONE_CONFIG_R2_ACCESS_KEY_ID
+                      valueFrom:
+                        secretKeyRef:
+                          name: r2-backup
+                          key: accessKeyId
+                    - name: RCLONE_CONFIG_R2_SECRET_ACCESS_KEY
+                      valueFrom:
+                        secretKeyRef:
+                          name: r2-backup
+                          key: secretAccessKey
+                  resources:
+                    requests:
+                      cpu: 10m
+                      memory: 32Mi
+                  volumeMounts:
+                    - name: remark-vol
+                      mountPath: /srv
+                      readOnly: true
+              volumes:
+                - name: remark-vol
+                  persistentVolumeClaim:
+                    claimName: remark42
 
 # Read by the remark42-route release. The chart's own HTTPRoute stays off.
 httpRoute:

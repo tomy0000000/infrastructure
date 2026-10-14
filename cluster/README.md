@@ -136,12 +136,21 @@ kubectl -n plausible exec -it clickhouse-0 -- clickhouse-client
 ## remark42
 
 Comments live in BoltDB files, one per site, with avatars and pictures beside
-them, all on one `do-block-storage-retain` volume. remark42 writes a nightly
-export of the comments into that same volume and nowhere else, so the volume
-is the only copy: an uninstall keeps it, a region loss does not. Shipping it
-to R2 is still to do.
+them, all on one `do-block-storage-retain` volume. The backup is not those
+files but the export remark42 writes itself: every 24 hours from pod start it
+dumps each site into `backup/` on that volume, one JSON line per comment, and
+keeps ten. That is the format its `restore` command reads. Avatars and
+pictures are plain files and are copied as such.
+
+A CronJob, `remark42-backup`, ships the exports, avatars and pictures with
+rclone into the `buckets.remark42` R2 bucket every night, one folder per run
+named by its UTC timestamp. The bucket's lifecycle rule expires them after 30
+days. The newest export in a folder is up to a day old, since the export and
+the job keep separate clocks. `runbooks/remark42-restore` puts a folder back,
+through `ADMIN_PASSWD`, which exists for that alone.
 
 ```
+kubectl -n remark42 get cronjob,job                     # schedule and the last runs
 kubectl -n remark42 exec deploy/remark42 -- ls -la /srv/var /srv/var/backup
 ```
 
