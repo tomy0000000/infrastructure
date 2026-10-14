@@ -186,6 +186,10 @@ tomy-clickhouse/plausible_events_db/20261010T030000Z`, then commit. The
 install's post-install hook restores it before Plausible starts. Leaving it
 empty starts an empty events database.
 
+remark42, if the `remark42` release and its volume are gone. Nothing to set
+before the apply: it installs empty, and once its pod is `Running`,
+`runbooks/remark42-restore` puts the newest folder of the bucket back into it.
+
 Everything else. `instance/<env>.env` has to exist, see `instance/README.md`.
 `needs:` orders the releases and the presync hooks apply CRDs on the way in,
 so a fresh cluster and an old one take the same command:
