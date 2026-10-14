@@ -21,8 +21,8 @@ the cluster, helmfile owns what is inside it.
   Uptime Kuma at `kuma.<zone>`, kube-prometheus-stack with its Grafana at
   `metrics.<zone>`, email-mcp, an MCP server over the mailcow mailbox, at
   `mcp-mail.<zone>`, Plausible at `a.<zone>`, with its ClickHouse beside it
-  in the same namespace, and remark42, the blog's comments, at
-  `remark42.<zone>`.
+  in the same namespace, remark42, the blog's comments, at
+  `remark42.<zone>`, and authentik, the identity provider, at `auth.<zone>`.
 
 ## Environments
 

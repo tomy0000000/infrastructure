@@ -100,8 +100,8 @@ Postgres. Becomes `main-<app>` in the `postgres` namespace, in the
 1. In 1Password, in `Develop`: **New Item** → **API Credential**, title
    `<cluster>-postgres-<app>`
 2. Set **username** to `<app>`, the role name
-3. Generate a password into **credential**. Letters and digits only: it is
-   embedded in a `postgres://` URL unescaped
+3. Into **credential**, paste `openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | head -c 32`.
+   Letters and digits only: it is embedded in a `postgres://` URL unescaped
 
 CNPG applies a changed password to the role within the hour, when ESO refreshes
 the Secret. The app only reads its URL at start, so follow a rotation with a
@@ -360,4 +360,53 @@ over SMTP. Becomes `SMTP_USERNAME` from **username** and `SMTP_PASSWORD` from
 5. In 1Password, in `Develop`: **New Item** → **API Credential**, title
    `<cluster>-mailcow-remark42`
 6. Set **username** to `remark@<zone>`, and paste the app password into
+   **credential**
+
+## `<cluster>-authentik-secret_key`
+
+The key authentik signs sessions and derives per-user identifiers from.
+Becomes `AUTHENTIK_SECRET_KEY` in `authentik-credentials` in the `authentik`
+namespace, as do the items below, each under the variable it names.
+
+1. In 1Password, in `Develop`: **New Item** → **API Credential**, title
+   `<cluster>-authentik-secret_key`
+2. Into **credential**, paste `openssl rand -base64 60 | tr -d '\n'`
+
+Written once, never rotated: user identifiers handed to every application
+derive from it, so a new key makes every user a stranger to the apps they
+signed into. Both pods read this whole group at start, so a changed value of
+any item below takes effect only after `kubectl -n authentik rollout restart
+deployment authentik-server authentik-worker`.
+
+## `<cluster>-authentik-akadmin`
+
+The built-in `akadmin` user, which authentik creates on its first start
+against an empty database from `AUTHENTIK_BOOTSTRAP_EMAIL` (**username**) and
+`AUTHENTIK_BOOTSTRAP_PASSWORD` (**credential**). Once the user exists, both
+are ignored, so a changed item changes nothing: edit the password in the admin
+interface instead. The item exists so a replay onto an empty account comes up
+with a known login.
+
+1. In 1Password, in `Develop`: **New Item** → **API Credential**, title
+   `<cluster>-authentik-akadmin`
+2. Set **username** to the admin's e-mail address (e.g. `authentik@<zone>`)
+3. Generate a password into **credential**
+
+## `<cluster>-mailcow-authentik`
+
+The mailbox authentik sends password resets, invitations and notifications
+from, over SMTP. Becomes `AUTHENTIK_EMAIL__USERNAME` from **username** and
+`AUTHENTIK_EMAIL__PASSWORD` from **credential**. The same address is
+`authentik.email.from` in `apps/values/authentik.yaml.gotmpl`.
+
+1. In the mailcow web UI at `https://mailcow.<zone>/admin/mailbox` → **Add
+   mailbox** with Username: `authentik@<zone>` if it does not exist, then
+   **Login** as it
+2. **App passwords** → **Create app password**
+3. Name it (e.g. `<cluster>-mailcow-authentik`)
+4. Tick **SMTP** only. Leave IMAP, POP3, EAS, DAV and Sieve unticked: the
+   pods can then send mail and nothing else → **Add**
+5. In 1Password, in `Develop`: **New Item** → **API Credential**, title
+   `<cluster>-mailcow-authentik`
+6. Set **username** to `authentik@<zone>`, and paste the app password into
    **credential**

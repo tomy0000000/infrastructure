@@ -24,6 +24,8 @@ repositories:
     url: https://cloudnative-pg.github.io/charts
   - name: groundhog2k
     url: https://groundhog2k.github.io/helm-charts
+  - name: authentik
+    url: https://charts.goauthentik.io
 
 releases:
   ## Platform: shared services every app depends on.
@@ -265,3 +267,27 @@ releases:
       - remark42/remark42
     values:
       - apps/values/remark42.yaml.gotmpl
+
+  # authentik, the identity provider, on the shared Postgres. Keys and the mailbox login from 1Password
+  - name: authentik
+    namespace: authentik
+    chart: authentik/authentik
+    version: 2026.8.3
+    # Renders an ExternalSecret, absent until ESO lands
+    disableValidationOnInstall: true
+    needs:
+      - gateway/cluster-config
+      - postgres/postgres
+    values:
+      - apps/values/authentik.yaml.gotmpl
+
+  # Its HTTPRoute, from the same values file, so a failure elsewhere cannot block it
+  - name: authentik-route
+    namespace: authentik
+    chart: ./apps/charts/route
+    # Renders a kind another release installs, absent on an empty cluster
+    disableValidationOnInstall: true
+    needs:
+      - authentik/authentik
+    values:
+      - apps/values/authentik.yaml.gotmpl

@@ -1,0 +1,71 @@
+authentik:
+  # The shared Postgres. Its password, with every other secret, arrives through envFrom below.
+  postgresql:
+    host: main-rw.postgres.svc
+    name: authentik
+    user: authentik
+  # Password resets, invitations and notifications go out through the mailcow host. Login from 1Password.
+  email:
+    host: {{ .Values.instances.mailcow.hostname }}
+    port: 587
+    use_tls: true
+    from: authentik <authentik@{{ .Values.zones.main }}>
+
+# Keys and logins from 1Password. A later envFrom wins, so these override the chart's own Secret.
+global:
+  envFrom:
+    - secretRef:
+        name: authentik-credentials
+
+server:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 512Mi
+
+worker:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 512Mi
+
+additionalObjects:
+  - apiVersion: external-secrets.io/v1
+    kind: ExternalSecret
+    metadata:
+      name: authentik-credentials
+    spec:
+      refreshInterval: 1h
+      secretStoreRef:
+        kind: ClusterSecretStore
+        name: onepassword
+      target:
+        name: authentik-credentials
+        creationPolicy: Owner
+      data:
+        - secretKey: AUTHENTIK_SECRET_KEY
+          remoteRef:
+            key: {{ dig "kubernetes" "name" "" .Values }}-authentik-secret_key/credential
+        - secretKey: AUTHENTIK_POSTGRESQL__PASSWORD
+          remoteRef:
+            key: {{ dig "kubernetes" "name" "" .Values }}-postgres-authentik/credential
+        # Read on the first start only, to create akadmin. Ignored once it exists.
+        - secretKey: AUTHENTIK_BOOTSTRAP_EMAIL
+          remoteRef:
+            key: {{ dig "kubernetes" "name" "" .Values }}-authentik-akadmin/username
+        - secretKey: AUTHENTIK_BOOTSTRAP_PASSWORD
+          remoteRef:
+            key: {{ dig "kubernetes" "name" "" .Values }}-authentik-akadmin/credential
+        - secretKey: AUTHENTIK_EMAIL__USERNAME
+          remoteRef:
+            key: {{ dig "kubernetes" "name" "" .Values }}-mailcow-authentik/username
+        - secretKey: AUTHENTIK_EMAIL__PASSWORD
+          remoteRef:
+            key: {{ dig "kubernetes" "name" "" .Values }}-mailcow-authentik/credential
+
+# Read by the authentik-route release, ignored by the chart above. Its own HTTPRoute stays off.
+httpRoute:
+  hostnames:
+    - auth.{{ .Values.zones.main }}
+  service: authentik-server
+  port: 80
