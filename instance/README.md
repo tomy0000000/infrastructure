@@ -99,4 +99,4 @@ that variable itself, so it would switch every `op` call in this shell to the
 service account, including the 1Password plugin behind `doctl`.
 
 The Family plan allows 1,000 reads per hour per token and 1,000 reads per day
-across the whole account, which is why ExternalSecrets refresh hourly.
+across the whole account, which is why ExternalSecrets refresh daily.

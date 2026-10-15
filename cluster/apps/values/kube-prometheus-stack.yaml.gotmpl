@@ -82,7 +82,7 @@ grafana:
       metadata:
         name: grafana-admin
       spec:
-        refreshInterval: 1h
+        refreshInterval: 24h
         secretStoreRef:
           kind: ClusterSecretStore
           name: onepassword
@@ -101,7 +101,7 @@ grafana:
       metadata:
         name: grafana-oauth
       spec:
-        refreshInterval: 1h
+        refreshInterval: 24h
         secretStoreRef:
           kind: ClusterSecretStore
           name: onepassword

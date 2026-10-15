@@ -133,8 +133,9 @@ Postgres. Becomes `main-<app>` in the `postgres` namespace, in the
 3. Into **credential**, paste `openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | head -c 32`.
    Letters and digits only: it is embedded in a `postgres://` URL unescaped
 
-CNPG applies a changed password to the role within the hour, when ESO refreshes
-the Secret. The app only reads its URL at start, so follow a rotation with a
+CNPG applies a changed password to the role within the day, when ESO refreshes
+the Secret. Force it sooner with the `force-sync` annotation described in
+`README.md`. The app only reads its URL at start, so follow a rotation with a
 restart of the app's Deployment.
 
 ## `<cluster>-cloudflare-clickhouse_backup`

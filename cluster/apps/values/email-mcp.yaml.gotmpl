@@ -40,7 +40,7 @@ extraObjects:
     metadata:
       name: email-mcp-token
     spec:
-      refreshInterval: 1h
+      refreshInterval: 24h
       secretStoreRef:
         kind: ClusterSecretStore
         name: onepassword
@@ -56,7 +56,7 @@ extraObjects:
     metadata:
       name: email-mcp-imap
     spec:
-      refreshInterval: 1h
+      refreshInterval: 24h
       secretStoreRef:
         kind: ClusterSecretStore
         name: onepassword

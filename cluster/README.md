@@ -87,9 +87,13 @@ hands it to the chart as an extra object. `instance/README.md` has the setup.
 `secrets.md` says how each item is created.
 
 The account is on the Family plan: 1,000 reads per hour per token and 1,000
-reads per day across the account. So `refreshInterval` on an ExternalSecret is
-`1h`, never the `1m` in upstream examples, which alone would burn the daily
-budget on one secret.
+reads per day across the account, and every `spec.data` entry is its own read.
+So `refreshInterval` on an ExternalSecret is `24h`, never the `1m` in upstream
+examples. At `1h` the 36 entries the cluster had in October 2026 already spent
+the daily budget. The ClusterSecretStore also caches reads for `1h`, so failed
+reconciles retry from the cache instead of spending reads. To pick up a rotated
+value sooner, annotate the ExternalSecret with `force-sync=$(date +%s)` after
+the cache expires.
 
 ## Postgres
 
