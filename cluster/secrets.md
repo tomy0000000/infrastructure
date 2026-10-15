@@ -72,6 +72,36 @@ kube-prometheus-stack-grafana`.
 An existing Cloudflare token can be edited in place to add a permission or a
 zone, so widening access does not mean a new item.
 
+## `<cluster>-authentik-grafana_oauth`
+
+The OAuth2 client Grafana signs users in with through authentik. Becomes
+`grafana-oauth` in the `monitoring` namespace, with the Client ID as
+`GF_AUTH_GENERIC_OAUTH_CLIENT_ID` from **username** and the Client Secret as
+`GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET` from **credential**. The non-secret
+half, endpoints and role mapping, is `grafana.grafana.ini.auth.generic_oauth`
+in `apps/values/kube-prometheus-stack.yaml.gotmpl`.
+
+1. In the authentik admin interface at `https://auth.<zone>/if/admin/` →
+   **Applications** → **Applications** → **Create with Provider**
+2. Application: **Name** `Grafana`, **Slug** `grafana`. The slug is in
+   `signout_redirect_url` in the values file, so the two must agree
+3. Provider: **OAuth2/OpenID Provider**, **Authorization flow** `implicit`
+   (consent is not asked), a **Signing Key** picked, and one **Redirect URI**
+   of type `Strict`: `https://metrics.<zone>/login/generic_oauth`
+4. **Submit**, then open the provider and copy the **Client ID** and **Client
+   Secret**
+5. In 1Password, in `Develop`: **New Item** → **API Credential**, title
+   `<cluster>-authentik-grafana_oauth`
+6. Set **username** to the Client ID, and paste the Client Secret into
+   **credential**
+
+The role mapping expects groups named `Grafana Admins` and `Grafana Editors`
+in authentik. Everyone else signs in as Viewer. Grafana reads the pair at
+start, so a rotated secret takes effect only after `kubectl -n monitoring
+rollout restart deployment kube-prometheus-stack-grafana`. User identities
+hang off authentik's user identifier, not this client, so a replacement
+client keeps every existing Grafana user.
+
 ## `<cluster>-cloudflare-postgres_backup`
 
 R2 S3 key the barman-cloud plugin writes base backups and WAL with. Becomes

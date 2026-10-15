@@ -61,10 +61,21 @@ grafana:
   grafana.ini:
     server:
       root_url: https://metrics.{{ .Values.zones.main }}
+    # Sign-in through authentik. Client ID and secret arrive through envFromSecret below.
+    auth.generic_oauth:
+      enabled: true
+      name: authentik
+      scopes: openid profile email
+      auth_url: https://auth.{{ .Values.zones.main }}/application/o/authorize/
+      token_url: https://auth.{{ .Values.zones.main }}/application/o/token/
+      api_url: https://auth.{{ .Values.zones.main }}/application/o/userinfo/
+      signout_redirect_url: https://auth.{{ .Values.zones.main }}/application/o/grafana/end-session/
+      role_attribute_path: contains(groups[*], 'Grafana Admins') && 'Admin' || contains(groups[*], 'Grafana Editors') && 'Editor' || 'Viewer'
   admin:
     existingSecret: grafana-admin
     userKey: admin-user
     passwordKey: admin-password
+  envFromSecret: grafana-oauth
   extraObjects:
     - apiVersion: external-secrets.io/v1
       kind: ExternalSecret
@@ -85,6 +96,25 @@ grafana:
           - secretKey: admin-password
             remoteRef:
               key: {{ dig "kubernetes" "name" "" .Values }}-grafana-admin/credential
+    - apiVersion: external-secrets.io/v1
+      kind: ExternalSecret
+      metadata:
+        name: grafana-oauth
+      spec:
+        refreshInterval: 1h
+        secretStoreRef:
+          kind: ClusterSecretStore
+          name: onepassword
+        target:
+          name: grafana-oauth
+          creationPolicy: Owner
+        data:
+          - secretKey: GF_AUTH_GENERIC_OAUTH_CLIENT_ID
+            remoteRef:
+              key: {{ dig "kubernetes" "name" "" .Values }}-authentik-grafana_oauth/username
+          - secretKey: GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET
+            remoteRef:
+              key: {{ dig "kubernetes" "name" "" .Values }}-authentik-grafana_oauth/credential
 
 # Read by the kube-prometheus-stack-route release, ignored by the chart above.
 httpRoute:
