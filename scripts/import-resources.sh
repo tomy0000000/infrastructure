@@ -184,6 +184,44 @@ import_bucket_rules() {
   done < <(yq -r '.buckets | to_entries | .[] | .key + " " + .value.name + " " + ((.value.access_hosts // []) | length | tostring)' "$env/config.yaml")
 }
 
+# cloudflare_r2_managed_domain cannot be imported either, and its read does not
+# refresh, so the state entry has to carry the live values from the API.
+import_managed_domains() {
+  local env="$1"
+  local key name address resp
+  while read -r key name; do
+    address="module.r2_${key}.cloudflare_r2_managed_domain.this"
+    if [[ -n $(terraform -chdir="$env" state list "$address" 2>/dev/null) ]]; then
+      echo "$env: ${name} managed domain already in state"
+      continue
+    fi
+    resp=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+      "https://api.cloudflare.com/client/v4/accounts/${TF_VAR_cloudflare_account_id}/r2/buckets/${name}/domains/managed")
+    if [[ $(jq -r '.success' <<<"$resp") != "true" ]]; then
+      echo "$env: ${name} managed domain not found, plan will create it"
+      continue
+    fi
+    if terraform -chdir="$env" state pull \
+      | jq --arg mod "module.r2_${key}" --arg aid "$TF_VAR_cloudflare_account_id" --arg bucket "$name" \
+           --argjson live "$(jq '.result' <<<"$resp")" '
+          .resources += [{
+            module: $mod, mode: "managed", type: "cloudflare_r2_managed_domain", name: "this",
+            provider: "provider[\"registry.terraform.io/cloudflare/cloudflare\"]",
+            instances: [{schema_version: 500, sensitive_attributes: [], attributes: {
+              account_id: $aid, bucket_name: $bucket, jurisdiction: "default",
+              bucket_id: $live.bucketId, domain: $live.domain, enabled: $live.enabled}}]
+          }]
+          | .serial += 1
+        ' \
+      | terraform -chdir="$env" state push - > /dev/null 2>&1; then
+      echo "$env: adopted ${name} managed domain into state"
+    else
+      echo "$env: state injection for ${name} managed domain failed" >&2
+      exit 1
+    fi
+  done < <(yq -r '.buckets | to_entries | .[] | .key + " " + .value.name' "$env/config.yaml")
+}
+
 # A cluster must never be double-created, so a lookup that succeeds but fails
 # to import is fatal rather than falling through to create.
 import_cluster() {
@@ -387,11 +425,9 @@ for env in "${!ENVS[@]}"; do
   step "$env" buckets
   step "$env" bucket_hosts
   step "$env" bucket_rules
+  step "$env" managed_domains
   step "$env" cluster
   step "$env" instances
   step "$env" instance_dns
   step "$env" instance_network
-
-  # These resources does not support import, but its create is idempotent
-  # - cloudflare_r2_managed_domain
 done
