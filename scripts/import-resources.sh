@@ -4,7 +4,7 @@ set -euo pipefail
 
 # Environment -> import steps to skip (staging has no cluster or instances)
 declare -A ENVS=(
-  [staging]="cluster instances instance_dns instance_network"
+  [staging]="cluster instances firewalls instance_dns instance_network"
   [production]=""
 )
 
@@ -292,6 +292,37 @@ import_instances() {
   done < <(yq -r '.instances // {} | to_entries | .[] | .key + " " + .value.name' "$env/config.yaml")
 }
 
+# Each instance's firewall carries the instance label, which Linode keeps unique.
+import_firewalls() {
+  local env="$1"
+  local key name resp firewall_id
+  while read -r key name; do
+    if [[ -n $(terraform -chdir="$env" state list "module.linode_${key}.linode_firewall.this" 2>/dev/null) ]]; then
+      echo "$env: firewall ${name} already in state"
+      continue
+    fi
+    resp=$(curl -s -H "Authorization: Bearer $LINODE_TOKEN" \
+      -H "X-Filter: {\"label\": \"${name}\"}" \
+      "https://api.linode.com/v4/networking/firewalls")
+    if [[ $(jq -r 'has("data")' <<<"$resp") != "true" ]]; then
+      echo "$env: firewall lookup for ${name} failed: $(jq -c '.errors' <<<"$resp")" >&2
+      exit 1
+    fi
+    firewall_id=$(jq -r '.data[0].id // empty' <<<"$resp")
+    if [[ -z "$firewall_id" ]]; then
+      echo "$env: firewall ${name} not found, plan will create it"
+      continue
+    fi
+    if terraform -chdir="$env" import -input=false \
+        "module.linode_${key}.linode_firewall.this" "$firewall_id" > /dev/null 2>&1; then
+      echo "$env: imported firewall ${name}"
+    else
+      echo "$env: import of firewall ${name} failed" >&2
+      exit 1
+    fi
+  done < <(yq -r '.instances // {} | to_entries | .[] | .key + " " + .value.name' "$env/config.yaml")
+}
+
 # cloudflare_dns_record is imported as <zone_id>/<record_id>, so the records can
 # only be adopted once the zone that holds them is itself in state.
 import_instance_dns() {
@@ -428,6 +459,7 @@ for env in "${!ENVS[@]}"; do
   step "$env" managed_domains
   step "$env" cluster
   step "$env" instances
+  step "$env" firewalls
   step "$env" instance_dns
   step "$env" instance_network
 done

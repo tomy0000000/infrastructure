@@ -30,6 +30,33 @@ resource "linode_instance" "this" {
   }
 }
 
+# Only mail, its web UI and SSH may reach the host, whatever is listening on it.
+resource "linode_firewall" "this" {
+  label           = var.name
+  inbound_policy  = "DROP"
+  outbound_policy = "ACCEPT"
+
+  inbound {
+    label    = "mail-and-ssh"
+    action   = "ACCEPT"
+    protocol = "TCP"
+    ports    = "22,25,80,110,143,443,465,587,993,995,4190"
+    ipv4     = ["0.0.0.0/0"]
+    ipv6     = ["::/0"]
+  }
+
+  # Path MTU discovery and IPv6 neighbour discovery need unsolicited ICMP in.
+  inbound {
+    label    = "icmp"
+    action   = "ACCEPT"
+    protocol = "ICMP"
+    ipv4     = ["0.0.0.0/0"]
+    ipv6     = ["::/0"]
+  }
+
+  linodes = [linode_instance.this.id]
+}
+
 locals {
   # ip_address is deprecated, so pick the public address out of the ipv4 set.
   # Linode allocates private addresses from 192.168.128.0/17.

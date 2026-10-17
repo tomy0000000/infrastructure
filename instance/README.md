@@ -55,12 +55,15 @@ Personal access token the Terraform Linode provider uses.
 4. Leave every scope at **No Access** except:
    - **Linodes** → **Read/Write** (the instances themselves)
    - **IPs** → **Read/Write** (reverse DNS and IPv6 ranges)
+   - **Firewalls** → **Read/Write** (the Cloud Firewall in front of each instance)
 5. **Create Token**, then copy it right away. Linode shows the value only once
 
-Reverse DNS and IPv6 ranges live under `/networking/`, which the **Linodes**
-scope does not cover. A token without **IPs** can still read an instance and its
-addresses, so the gap only surfaces when Terraform tries to set a PTR or
-allocate a range.
+Reverse DNS, IPv6 ranges and firewalls live under `/networking/`, which the
+**Linodes** scope does not cover. A token without **IPs** can still read an
+instance and its addresses, so the gap only surfaces when Terraform tries to
+set a PTR or allocate a range. A token without **Firewalls** fails earlier: the
+import script looks the firewall up by label before every plan and stops on
+the refused lookup.
 
 Linode cannot change the scopes of an existing personal access token, so
 widening access means creating a replacement and revoking the old one.
