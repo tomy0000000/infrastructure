@@ -50,12 +50,14 @@ kubernetes:
 # Mailcow Linode instances
 instances:
   mailcow:
-    name: Mailcow
-    region: ap-northeast
-    type: g6-standard-1
-    private_ip: true
+    name: mailcow
+    region: us-west
+    type: g6-standard-2
+    private_ip: false
     backups_enabled: true
     hostname: mailcow.tomy.me
-    image: linode/ubuntu22.04
+    image: linode/ubuntu26.04
     authorized_users:
       - tomyhsieh
+    mailcow_version: 2026-09a
+    timezone: Asia/Taipei

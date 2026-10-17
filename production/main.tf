@@ -96,4 +96,6 @@ module "linode_mailcow" {
   zone_id          = module.zone_main.zone_id
   image            = local.instances.mailcow.image
   authorized_users = local.instances.mailcow.authorized_users
+  mailcow_version  = local.instances.mailcow.mailcow_version
+  timezone         = local.instances.mailcow.timezone
 }

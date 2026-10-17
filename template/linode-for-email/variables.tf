@@ -51,3 +51,15 @@ variable "authorized_users" {
   description = "Linode usernames whose profile SSH keys are added to root on creation. Required alongside image, and empty for an adopted instance"
   default     = []
 }
+
+variable "mailcow_version" {
+  type        = string
+  description = "mailcow-dockerized release tag cloud-init installs on first boot (e.g. 2026-09a). Null skips the bootstrap, for an adopted instance"
+  default     = null
+}
+
+variable "timezone" {
+  type        = string
+  description = "TZ for mailcow, as in Asia/Taipei"
+  default     = "Etc/UTC"
+}

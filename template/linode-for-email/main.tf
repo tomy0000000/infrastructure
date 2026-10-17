@@ -13,11 +13,25 @@ resource "linode_instance" "this" {
   private_ip      = var.private_ip
   backups_enabled = var.backups_enabled
 
+  # cloud-init bootstrap, read once by the Metadata service on first boot.
+  dynamic "metadata" {
+    for_each = var.mailcow_version == null ? [] : [1]
+    content {
+      user_data = base64encode(templatefile("${path.module}/cloud-init.yaml.tftpl", {
+        mailcow_version = var.mailcow_version
+        hostname        = var.hostname
+        timezone        = var.timezone
+      }))
+    }
+  }
+
   lifecycle {
     prevent_destroy = true
 
     ignore_changes = [
+      # First-boot inputs. Changing either would otherwise replace the instance.
       image,
+      metadata,
       root_pass,
       authorized_keys,
       authorized_users,

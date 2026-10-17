@@ -1,0 +1,95 @@
+#cloud-config
+# First boot of a mailcow host. Everything here is replayed from scratch on a fresh Linode.
+package_update: true
+package_upgrade: true
+packages:
+  - docker.io
+  - docker-compose-v2
+  - git
+  - jq
+
+write_files:
+  # What mailcow's generate_config.sh would otherwise write and restart Docker for.
+  - path: /etc/docker/daemon.json
+    content: |
+      {"ipv6": true, "fixed-cidr-v6": "fd00:dead:beef:c0::/80"}
+
+  # Linode routes a /64 to the host but Network Helper never configures an address from it.
+  - path: /usr/local/sbin/linode-ipv6-range
+    permissions: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      metadata=http://169.254.169.254/v1
+      token=$(curl -sf -X PUT -H "Metadata-Token-Expiry-Seconds: 600" "$metadata/token")
+      # The range is created right after the instance, so the first boot may have to wait for it.
+      range=""
+      for _ in $(seq 60); do
+        network=$(curl -sf -H "Metadata-Token: $token" -H "Accept: application/json" "$metadata/network")
+        range=$(jq -r '.ipv6.ranges[0] // empty' <<<"$network")
+        [[ -n "$range" ]] && break
+        sleep 10
+      done
+      [[ -n "$range" ]] || { echo "no IPv6 range routed to this Linode" >&2; exit 1; }
+      address="$${range%%::/*}::1/64"
+      # The SLAAC address must stay (the range is routed to it) but gets a non-default label, so RFC 6724 picks ::1 as source.
+      slaac=$(jq -r '.ipv6.slaac' <<<"$network")
+      slaac_prefix=$(python3 -c 'import ipaddress, sys; print(ipaddress.IPv6Interface(sys.argv[1].split("/")[0] + "/64").network)' "$slaac")
+      # Network Helper's .network file wins over netplan's, so extend it with a drop-in rather than fight it.
+      network_file=$(networkctl --json=short status eth0 | jq -r '.NetworkFile')
+      drop_in="$network_file.d/60-ipv6-range.conf"
+      wanted=$(printf '[Network]\nAddress=%s\n\n[IPv6AddressLabel]\nLabel=99\nPrefix=%s\n' "$address" "$slaac_prefix")
+      if [[ ! -f "$drop_in" ]] || [[ "$(cat "$drop_in")" != "$wanted" ]]; then
+        mkdir -p "$(dirname "$drop_in")"
+        printf '%s\n' "$wanted" > "$drop_in"
+        networkctl reload
+        networkctl reconfigure eth0
+      fi
+
+  - path: /etc/systemd/system/linode-ipv6-range.service
+    content: |
+      [Unit]
+      Description=Configure the first address of the routed Linode IPv6 range
+      After=network-online.target
+      Wants=network-online.target
+
+      [Service]
+      Type=oneshot
+      RemainAfterExit=yes
+      ExecStart=/usr/local/sbin/linode-ipv6-range
+
+      [Install]
+      WantedBy=multi-user.target
+
+  - path: /usr/local/sbin/mailcow-bootstrap
+    permissions: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      dir=/opt/mailcow-dockerized
+      [[ -d "$dir" ]] && { echo "$dir exists, nothing to do"; exit 0; }
+      # master is mailcow's release branch; pin it to the release so a replay installs the same thing.
+      git clone --branch master https://github.com/mailcow/mailcow-dockerized "$dir"
+      cd "$dir"
+      git reset --hard "${mailcow_version}"
+      ln -sfn mailcow.conf .env
+      MAILCOW_HOSTNAME="${hostname}" MAILCOW_TZ="${timezone}" MAILCOW_BRANCH=master SKIP_CLAMD=y FORCE=y ./generate_config.sh
+      # generate_config.sh leaves DOCKER_COMPOSE_VERSION empty, and the backup helper refuses to run without it.
+      sed -i 's/^SKIP_FTS=.*/SKIP_FTS=y/; s/^DOCKER_COMPOSE_VERSION=.*/DOCKER_COMPOSE_VERSION=native/' mailcow.conf
+      # Never relay for mynetworks: if Docker falls back to its userland proxy, every client looks like the bridge gateway.
+      cat > data/conf/postfix/extra.cf <<'EOF'
+      myhostname = ${hostname}
+      smtpd_relay_restrictions = permit_sasl_authenticated,permit_auth_destination,reject
+      EOF
+      # ofelia leaks memory (mailcow-dockerized#5807); the cap keeps the kernel from taking it out of the whole host.
+      cat > docker-compose.override.yml <<'EOF'
+      services:
+        ofelia-mailcow:
+          mem_limit: 200m
+      EOF
+      docker compose pull --quiet
+      docker compose up -d
+
+runcmd:
+  - systemctl enable --now linode-ipv6-range.service
+  - /usr/local/sbin/mailcow-bootstrap
