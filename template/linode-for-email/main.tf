@@ -35,8 +35,8 @@ locals {
   # Linode allocates private addresses from 192.168.128.0/17.
   public_ipv4 = one([for ip in linode_instance.this.ipv4 : ip if !startswith(ip, "192.168.")])
 
-  # First address of the routed range, carrying both the AAAA and the PTR.
-  ipv6_address = "${linode_ipv6_range.this.range}1"
+  # First address of the routed range for the AAAA and PTR, canonicalised because the API may spell it with leading zeros.
+  ipv6_address = cidrhost("${linode_ipv6_range.this.range}/${linode_ipv6_range.this.prefix_length}", 1)
 }
 
 resource "linode_ipv6_range" "this" {
