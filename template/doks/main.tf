@@ -28,8 +28,13 @@ resource "digitalocean_kubernetes_cluster" "this" {
   }
 
   lifecycle {
-    # The autoscaler owns the live node count, so every scaling event would
-    # otherwise read as drift.
-    ignore_changes = [node_pool[0].node_count]
+    ignore_changes = [
+      # The autoscaler owns the live node count, so every scaling event would
+      # otherwise read as drift.
+      node_pool[0].node_count,
+      # Provider-side defaults that the API never returns for an adopted cluster.
+      destroy_all_associated_resources,
+      registry_integration,
+    ]
   }
 }
