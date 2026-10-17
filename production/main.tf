@@ -98,4 +98,9 @@ module "linode_mailcow" {
   authorized_users = local.instances.mailcow.authorized_users
   mailcow_version  = local.instances.mailcow.mailcow_version
   timezone         = local.instances.mailcow.timezone
+  mail_domain      = local.instances.mailcow.mail_domain
+  dkim_selector    = local.instances.mailcow.dkim_selector
+  dkim_public_key  = local.instances.mailcow.dkim_public_key
+  dmarc_rua        = local.instances.mailcow.dmarc_rua
+  tlsa_spki_sha256 = local.instances.mailcow.tlsa_spki_sha256
 }

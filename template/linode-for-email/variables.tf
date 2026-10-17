@@ -63,3 +63,33 @@ variable "timezone" {
   description = "TZ for mailcow, as in Asia/Taipei"
   default     = "Etc/UTC"
 }
+
+variable "mail_domain" {
+  type        = string
+  description = "Domain whose MX, SPF, DMARC, DKIM and autodiscovery records point at this host. Null creates none"
+  default     = null
+}
+
+variable "dkim_selector" {
+  type        = string
+  description = "DKIM selector mailcow signs with, from Configuration → ARC/DKIM keys"
+  default     = null
+}
+
+variable "dkim_public_key" {
+  type        = string
+  description = "The p= value of that key, as mailcow shows it"
+  default     = null
+}
+
+variable "dmarc_rua" {
+  type        = list(string)
+  description = "Addresses aggregate DMARC reports go to"
+  default     = []
+}
+
+variable "tlsa_spki_sha256" {
+  type        = string
+  description = "SHA-256 of the mail certificate's public key for the DANE TLSA record (3 1 1): openssl x509 -in cert.pem -pubkey -noout | openssl pkey -pubin -outform DER | openssl dgst -sha256. Null creates none"
+  default     = null
+}

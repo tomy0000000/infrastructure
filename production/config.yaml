@@ -61,3 +61,10 @@ instances:
       - tomyhsieh
     mailcow_version: 2026-09a
     timezone: Asia/Taipei
+    mail_domain: tomy.me
+    dkim_selector: dkim2026
+    dkim_public_key: MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt2CYT84zImUTnEXQ5hsTqflSVkltuxAnIViZrurLc5+YmHB8ZhU1u9iKWcxxvUVKh4a/yJZe6M/Y5xSOlPKNkjeaDwNJ6M+XanIU0l7kbI2Ke0E5Kvu9ksno/TvBG6wgQTv+VAuj7kSEhX9EcWfWX21mloo3GoS6LLRhYwmspAZxjqOwG6xah5Jy1o2c7QCUam+OKk8v5ZWAdDy2k0dumKuS16utLkVGuxRhJ29sflLbaOt0+efw8MrAcX/hbDNccDK+hqQ9Qu5w/kyuvgIxT5CjhfwmRxTDYOZx1zOFF3m4sxouzYNQicVAC6/W9K9i/bsde6/rdwwM8IrzeZge2QIDAQAB
+    dmarc_rua:
+      - 7d9c53bbd290497aa6e858ade447d141@dmarc-reports.cloudflare.net
+      - postmaster@tomy.me
+    tlsa_spki_sha256: ad3181fa38b9396ba30a9833bb1f4441890ade652f3e6f5d19fbaee2a7399482

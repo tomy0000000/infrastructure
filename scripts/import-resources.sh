@@ -4,7 +4,7 @@ set -euo pipefail
 
 # Environment -> import steps to skip (staging has no cluster or instances)
 declare -A ENVS=(
-  [staging]="cluster instances firewalls instance_dns instance_network"
+  [staging]="cluster instances firewalls instance_dns mail_dns instance_network"
   [production]=""
 )
 
@@ -327,7 +327,7 @@ import_firewalls() {
 # only be adopted once the zone that holds them is itself in state.
 import_instance_dns() {
   local env="$1"
-  local zone_id key hostname record rname rtype address resp matches record_id
+  local zone_id key hostname tlsa record rname rtype rhost address resp matches record_id
   if [[ -z $(terraform -chdir="$env" state list "module.zone_main.cloudflare_zone.this" 2>/dev/null) ]]; then
     echo "$env: main zone not in state, plan will create the instance records"
     return 0
@@ -335,40 +335,88 @@ import_instance_dns() {
   zone_id=$(terraform -chdir="$env" state pull | jq -r 'first(.resources[]
     | select(.module == "module.zone_main" and .type == "cloudflare_zone")
     | .instances[0].attributes.id)')
-  while read -r key hostname; do
-    for record in a:A aaaa:AAAA; do
-      rname=${record%%:*}
-      rtype=${record##*:}
+  while read -r key hostname tlsa; do
+    for record in "a:A:${hostname}" "aaaa:AAAA:${hostname}" "tlsa[0]:TLSA:_25._tcp.${hostname}"; do
+      IFS=: read -r rname rtype rhost <<<"$record"
+      [[ "$rtype" == "TLSA" && -z "$tlsa" ]] && continue # no TLSA configured
       address="module.linode_${key}.cloudflare_dns_record.${rname}"
       if [[ -n $(terraform -chdir="$env" state list "$address" 2>/dev/null) ]]; then
-        echo "$env: ${rtype} record ${hostname} already in state"
+        echo "$env: ${rtype} record ${rhost} already in state"
         continue
       fi
       resp=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-        "https://api.cloudflare.com/client/v4/zones/${zone_id}/dns_records?name.exact=${hostname}&type=${rtype}")
+        "https://api.cloudflare.com/client/v4/zones/${zone_id}/dns_records?name.exact=${rhost}&type=${rtype}")
       if [[ $(jq -r '.success' <<<"$resp") != "true" ]]; then
-        echo "$env: ${rtype} record lookup for ${hostname} failed: $(jq -c '.errors' <<<"$resp")" >&2
+        echo "$env: ${rtype} record lookup for ${rhost} failed: $(jq -c '.errors' <<<"$resp")" >&2
         exit 1
       fi
       # A name and type can hold several records, and guessing adopts the wrong one.
       matches=$(jq -r '.result | length' <<<"$resp")
       if [[ "$matches" -gt 1 ]]; then
-        echo "$env: ${rtype} record ${hostname} has ${matches} matches, import it by hand" >&2
+        echo "$env: ${rtype} record ${rhost} has ${matches} matches, import it by hand" >&2
         exit 1
       fi
       record_id=$(jq -r '.result[0].id // empty' <<<"$resp")
       if [[ -z "$record_id" ]]; then
-        echo "$env: ${rtype} record ${hostname} not found, plan will create it"
+        echo "$env: ${rtype} record ${rhost} not found, plan will create it"
         continue
       fi
       if terraform -chdir="$env" import -input=false \
           "$address" "${zone_id}/${record_id}" > /dev/null 2>&1; then
-        echo "$env: imported ${rtype} record ${hostname}"
+        echo "$env: imported ${rtype} record ${rhost}"
       else
-        echo "$env: import of ${rtype} record ${hostname} failed"
+        echo "$env: import of ${rtype} record ${rhost} failed"
       fi
     done
-  done < <(yq -r '.instances // {} | to_entries | .[] | .key + " " + .value.hostname' "$env/config.yaml")
+  done < <(yq -r '.instances // {} | to_entries | .[] | .key + " " + .value.hostname + " " + (.value.tlsa_spki_sha256 // "")' "$env/config.yaml")
+}
+
+# The mail domain's records, for instances with a mail_domain. The apex holds
+# several TXT records, so SPF is told apart by its content.
+import_mail_dns() {
+  local env="$1"
+  local zone_id key domain selector record rname rtype rhost prefix address resp matches record_id
+  if [[ -z $(terraform -chdir="$env" state list "module.zone_main.cloudflare_zone.this" 2>/dev/null) ]]; then
+    echo "$env: main zone not in state, plan will create the mail records"
+    return 0
+  fi
+  zone_id=$(terraform -chdir="$env" state pull | jq -r 'first(.resources[]
+    | select(.module == "module.zone_main" and .type == "cloudflare_zone")
+    | .instances[0].attributes.id)')
+  while read -r key domain selector; do
+    for record in "mx:MX:${domain}:" "spf:TXT:${domain}:\"v=spf1" "dmarc:TXT:_dmarc.${domain}:" \
+        "dkim:TXT:${selector}._domainkey.${domain}:" "autoconfig:CNAME:autoconfig.${domain}:" \
+        "autodiscover:CNAME:autodiscover.${domain}:" "autodiscover_srv:SRV:_autodiscover._tcp.${domain}:"; do
+      IFS=: read -r rname rtype rhost prefix <<<"$record"
+      address="module.linode_${key}.cloudflare_dns_record.${rname}[\"${domain}\"]"
+      if [[ -n $(terraform -chdir="$env" state list "$address" 2>/dev/null) ]]; then
+        echo "$env: ${rtype} record ${rhost} already in state"
+        continue
+      fi
+      resp=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+        "https://api.cloudflare.com/client/v4/zones/${zone_id}/dns_records?name.exact=${rhost}&type=${rtype}")
+      if [[ $(jq -r '.success' <<<"$resp") != "true" ]]; then
+        echo "$env: ${rtype} record lookup for ${rhost} failed: $(jq -c '.errors' <<<"$resp")" >&2
+        exit 1
+      fi
+      matches=$(jq -r --arg p "$prefix" '[.result[] | select(.content | startswith($p))] | length' <<<"$resp")
+      if [[ "$matches" -gt 1 ]]; then
+        echo "$env: ${rtype} record ${rhost} has ${matches} matches, import it by hand" >&2
+        exit 1
+      fi
+      record_id=$(jq -r --arg p "$prefix" 'first(.result[] | select(.content | startswith($p)) | .id) // empty' <<<"$resp")
+      if [[ -z "$record_id" ]]; then
+        echo "$env: ${rtype} record ${rhost} not found, plan will create it"
+        continue
+      fi
+      if terraform -chdir="$env" import -input=false \
+          "$address" "${zone_id}/${record_id}" > /dev/null 2>&1; then
+        echo "$env: imported ${rtype} record ${rhost}"
+      else
+        echo "$env: import of ${rtype} record ${rhost} failed"
+      fi
+    done
+  done < <(yq -r '.instances // {} | to_entries | .[] | select(.value.mail_domain) | .key + " " + .value.mail_domain + " " + .value.dkim_selector' "$env/config.yaml")
 }
 
 # Skips when already in state or when there is nothing to adopt, and fails hard
@@ -461,5 +509,6 @@ for env in "${!ENVS[@]}"; do
   step "$env" instances
   step "$env" firewalls
   step "$env" instance_dns
+  step "$env" mail_dns
   step "$env" instance_network
 done

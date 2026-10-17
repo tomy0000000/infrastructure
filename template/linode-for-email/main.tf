@@ -138,3 +138,127 @@ resource "cloudflare_dns_record" "aaaa" {
   ttl     = 1
   proxied = false
 }
+
+# DANE pins the public key, which mailcow's ACME client keeps across renewals.
+resource "cloudflare_dns_record" "tlsa" {
+  count = var.tlsa_spki_sha256 == null ? 0 : 1
+
+  zone_id = var.zone_id
+  name    = "_25._tcp.${var.hostname}"
+  type    = "TLSA"
+  comment = var.name
+  ttl     = 1
+  proxied = false
+  data = {
+    usage         = 3
+    selector      = 1
+    matching_type = 1
+    certificate   = var.tlsa_spki_sha256
+  }
+}
+
+##################################################
+# Mail domain records, when this host is the MX
+##################################################
+
+locals {
+  mail = var.mail_domain == null ? {} : { (var.mail_domain) = true }
+
+  # Cloudflare stores a TXT longer than 255 characters as quoted 255-character chunks, so match that or the plan never settles.
+  dkim_txt = "v=DKIM1;k=rsa;t=s;s=email;p=${var.dkim_public_key}"
+  dkim_content = join(" ", [
+    for i in range(0, length(local.dkim_txt), 255) : "\"${substr(local.dkim_txt, i, min(255, length(local.dkim_txt) - i))}\""
+  ])
+}
+
+resource "cloudflare_dns_record" "mx" {
+  for_each = local.mail
+
+  zone_id  = var.zone_id
+  name     = each.key
+  type     = "MX"
+  comment  = var.name
+  content  = var.hostname
+  priority = 10
+  ttl      = 1
+  proxied  = false
+}
+
+resource "cloudflare_dns_record" "spf" {
+  for_each = local.mail
+
+  zone_id = var.zone_id
+  name    = each.key
+  type    = "TXT"
+  comment = var.name
+  content = "\"v=spf1 mx -all\""
+  ttl     = 1
+  proxied = false
+}
+
+resource "cloudflare_dns_record" "dmarc" {
+  for_each = local.mail
+
+  zone_id = var.zone_id
+  name    = "_dmarc.${each.key}"
+  type    = "TXT"
+  comment = var.name
+  content = "\"v=DMARC1; p=reject; rua=${join(",", [for a in var.dmarc_rua : "mailto:${a}"])}\""
+  ttl     = 1
+  proxied = false
+}
+
+resource "cloudflare_dns_record" "dkim" {
+  for_each = local.mail
+
+  zone_id = var.zone_id
+  name    = "${var.dkim_selector}._domainkey.${each.key}"
+  type    = "TXT"
+  comment = var.name
+  content = local.dkim_content
+  ttl     = 1
+  proxied = false
+}
+
+# Thunderbird and Outlook find the IMAP and SMTP settings through these.
+resource "cloudflare_dns_record" "autoconfig" {
+  for_each = local.mail
+
+  zone_id = var.zone_id
+  name    = "autoconfig.${each.key}"
+  type    = "CNAME"
+  comment = var.name
+  content = var.hostname
+  ttl     = 1
+  proxied = false
+}
+
+resource "cloudflare_dns_record" "autodiscover" {
+  for_each = local.mail
+
+  zone_id = var.zone_id
+  name    = "autodiscover.${each.key}"
+  type    = "CNAME"
+  comment = var.name
+  content = var.hostname
+  ttl     = 1
+  proxied = false
+}
+
+resource "cloudflare_dns_record" "autodiscover_srv" {
+  for_each = local.mail
+
+  zone_id  = var.zone_id
+  name     = "_autodiscover._tcp.${each.key}"
+  type     = "SRV"
+  comment  = var.name
+  priority = 0
+  ttl      = 1
+  proxied  = false
+  data = {
+    priority = 0
+    weight   = 1
+    port     = 443
+    target   = var.hostname
+  }
+}
