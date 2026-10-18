@@ -30,8 +30,6 @@ set -a
 # shellcheck source=/dev/null
 source "$env_file"
 set +a
-# doctl reads its own variable name, not the one the Terraform provider uses.
-export DIGITALOCEAN_ACCESS_TOKEN="$DIGITALOCEAN_TOKEN"
 
 cluster="$(yq -r '.kubernetes.name // ""' "$env/config.yaml")"
 size="$(yq -r '.kubernetes.node.size' "$env/config.yaml")"

@@ -26,7 +26,7 @@ load_env() {
 
   : "${CLOUDFLARE_API_TOKEN:?}"
   : "${TF_VAR_cloudflare_account_id:?}"
-  : "${DIGITALOCEAN_TOKEN:?}"
+  : "${DIGITALOCEAN_ACCESS_TOKEN:?}"
   : "${LINODE_TOKEN:?}"
 }
 
@@ -236,7 +236,7 @@ import_cluster() {
   fi
 
   # The API has no name filter for clusters, so match client side.
-  resp=$(curl -s -H "Authorization: Bearer $DIGITALOCEAN_TOKEN" \
+  resp=$(curl -s -H "Authorization: Bearer $DIGITALOCEAN_ACCESS_TOKEN" \
     "https://api.digitalocean.com/v2/kubernetes/clusters?per_page=200")
   if [[ $(jq -r 'has("kubernetes_clusters")' <<<"$resp") != "true" ]]; then
     echo "$env: cluster lookup for ${name} failed: $(jq -c '.message // .' <<<"$resp")" >&2

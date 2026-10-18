@@ -28,7 +28,7 @@ API token the Terraform Cloudflare provider uses.
 An existing token can be edited in place to add a missing permission, so there
 is no need to issue a new one and update both env files.
 
-## `DIGITALOCEAN_TOKEN`
+## `DIGITALOCEAN_ACCESS_TOKEN`
 
 Personal access token the Terraform DigitalOcean provider uses, and the same
 token the kubeconfig embeds for cluster access.
