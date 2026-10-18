@@ -16,13 +16,15 @@ the cluster, helmfile owns what is inside it.
   Postgres cluster `main` with its backups to R2.
 - `apps/` third-party charts whose versions are pinned and bumped by hand. Each
   app is two releases reading one values file: the chart, and `charts/route`,
-  a local chart rendering the HTTPRoute that attaches it to the shared Gateway.
+  a local chart rendering the HTTPRoutes that attach it to the shared Gateway.
   Separate releases, so one app failing cannot block another's route. Today:
   Uptime Kuma at `kuma.<zone>`, kube-prometheus-stack with its Grafana at
   `metrics.<zone>`, email-mcp, an MCP server over the mailcow mailbox, at
   `mcp-mail.<zone>`, Plausible at `a.<zone>`, with its ClickHouse beside it
   in the same namespace, remark42, the blog's comments, at
-  `remark42.<zone>`, and authentik, the identity provider, at `auth.<zone>`.
+  `remark42.<zone>`, authentik, the identity provider, at `auth.<zone>`, and
+  nuphos in the `nuphos-dev` namespace at `nuphos-dev-{api,storage,runtime}.<zone>`,
+  its chart pinned to a commit of an unmerged PR until upstream publishes it.
 
 ## Environments
 

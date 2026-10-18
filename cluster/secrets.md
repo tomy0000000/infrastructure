@@ -441,3 +441,56 @@ from, over SMTP. Becomes `AUTHENTIK_EMAIL__USERNAME` from **username** and
    `<cluster>-mailcow-authentik`
 6. Set **username** to `authentik@<zone>`, and paste the app password into
    **credential**
+
+## `<cluster>-nuphos-jwt_secret`, `-mongo_password`, `-storage_secret_key` and `-runtime_auth_key`
+
+The four keys the nuphos chart would otherwise generate. Each becomes the
+variable of the same name in upper case, `NUPHOS_JWT_SECRET`, `MONGO_PASSWORD`,
+`STORAGE_SECRET_KEY` and `RUNTIME_AUTH_KEY`, in `nuphos-credentials` in the
+`nuphos-dev` namespace.
+
+1. In 1Password, in `Develop`: **New Item** → **API Credential**, title
+   `<cluster>-nuphos-jwt_secret`
+2. Into **credential**, paste `openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | head -c 64`
+3. Again for `<cluster>-nuphos-mongo_password` and
+   `<cluster>-nuphos-storage_secret_key`, with `head -c 32`, and for
+   `<cluster>-nuphos-runtime_auth_key` with `head -c 64`. Letters and digits
+   only: the Mongo password is embedded in the connection URI unescaped
+
+MongoDB creates its root user from the password only on an empty volume, so a
+changed Mongo password locks the backend out of its data: change it in Mongo
+first. Rotating the JWT secret signs every user out. The runtime auth key is
+the runtime console's password. Every pod reads these at start, so a changed
+value takes effect only after `kubectl -n nuphos-dev rollout restart
+deployment/nuphos-backend statefulset/nuphos-rustfs statefulset/nuphos-runtime`.
+
+## `<cluster>-nuphos-runtime_token_encryption_key`
+
+The key the nuphos backend seals the runtime credentials it stores with.
+Becomes `RUNTIME_TOKEN_ENCRYPTION_KEY` in `nuphos-credentials`.
+
+1. In 1Password, in `Develop`: **New Item** → **API Credential**, title
+   `<cluster>-nuphos-runtime_token_encryption_key`
+2. Into **credential**, paste `openssl rand -base64 32`. Exactly that: the
+   backend expects base64 of 32 bytes, padding included
+
+Written once, never rotated: a new key cannot open the credentials sealed with
+the old one, so every paired runtime disconnects and has to pair again.
+
+## `<cluster>-resend-nuphos_email`
+
+Resend API key the nuphos backend sends sign-in codes with. Becomes
+`RESEND_API_KEY` in `nuphos-credentials`. The sender is `email.from` in
+`apps/values/nuphos.yaml.gotmpl`, and its domain must be verified in Resend.
+
+1. In the [Resend dashboard](https://resend.com/domains) → **Add Domain**, add
+   the sender's domain and publish the DNS records it lists, then wait for
+   **Verified**
+2. **API Keys** → **Create API Key**, name it (e.g.
+   `<cluster>-resend-nuphos_email`), pick **Sending access** and restrict it to
+   that domain, then copy it. Resend shows the key only once
+3. In 1Password, in `Develop`: **New Item** → **API Credential**, title
+   `<cluster>-resend-nuphos_email`, paste the key into **credential**
+
+The backend reads it at start, so a rotated key takes effect after
+`kubectl -n nuphos-dev rollout restart deployment nuphos-backend`.

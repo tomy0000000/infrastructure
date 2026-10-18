@@ -1,26 +1,37 @@
+{{- /* httpRoutes renders one route per key, named <release>-<key>, for apps serving several hosts. */}}
+{{- $routes := dict .Release.Name .Values.httpRoute }}
+{{- with .Values.httpRoutes }}
+{{- $routes = dict }}
+{{- range $key, $route := . }}
+{{- $_ := set $routes (printf "%s-%s" $.Release.Name $key) $route }}
+{{- end }}
+{{- end }}
+{{- range $name, $route := $routes }}
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: {{ .Release.Name }}
-  namespace: {{ .Release.Namespace }}
+  name: {{ $name }}
+  namespace: {{ $.Release.Namespace }}
 spec:
   parentRefs:
-    - name: {{ .Values.gatewayName }}
-      namespace: {{ .Values.gatewayNamespace }}
+    - name: {{ $.Values.gatewayName }}
+      namespace: {{ $.Values.gatewayNamespace }}
       sectionName: https
   # No hostnames would match every host on the listener, so refuse it.
   hostnames:
-{{- if not .Values.httpRoute.hostnames }}
+{{- if not $route.hostnames }}
 {{- fail "httpRoute.hostnames must list at least one host" }}
 {{- end }}
-{{- range .Values.httpRoute.hostnames }}
+{{- range $route.hostnames }}
     - {{ . | quote }}
 {{- end }}
   rules:
     - backendRefs:
-        - name: {{ required "httpRoute.service is required" .Values.httpRoute.service }}
-          port: {{ required "httpRoute.port is required" .Values.httpRoute.port }}
-{{- with .Values.httpRoute.requestTimeout }}
+        - name: {{ required "httpRoute.service is required" $route.service }}
+          port: {{ required "httpRoute.port is required" $route.port }}
+{{- with $route.requestTimeout }}
       timeouts:
         request: {{ . | quote }}
+{{- end }}
 {{- end }}

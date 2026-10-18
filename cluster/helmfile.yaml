@@ -291,3 +291,25 @@ releases:
       - authentik/authentik
     values:
       - apps/values/authentik.yaml.gotmpl
+
+  # nuphos backend, MongoDB, RustFS and the Claude Code runtime. Unpublished, so pinned to a commit of the fork's PR branch
+  - name: nuphos
+    namespace: nuphos-dev
+    chart: git::https://github.com/tomy0000000/nuphos.git@deploy/helm/nuphos?ref=0f2c62e31938c6a3432a16167387c83ce5753792
+    # Renders an ExternalSecret, absent until ESO lands
+    disableValidationOnInstall: true
+    needs:
+      - gateway/cluster-config
+    values:
+      - apps/values/nuphos.yaml.gotmpl
+
+  # Its HTTPRoutes for the api, storage and runtime hosts, from the same values file
+  - name: nuphos-route
+    namespace: nuphos-dev
+    chart: ./apps/charts/route
+    # Renders a kind another release installs, absent on an empty cluster
+    disableValidationOnInstall: true
+    needs:
+      - nuphos-dev/nuphos
+    values:
+      - apps/values/nuphos.yaml.gotmpl

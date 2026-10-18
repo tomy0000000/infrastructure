@@ -6,3 +6,5 @@ httpRoute:
   service: ""
   port: 0
   requestTimeout: ""
+# Or several routes keyed by suffix, each shaped like httpRoute. Overrides httpRoute when set.
+httpRoutes: {}

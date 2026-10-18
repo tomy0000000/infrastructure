@@ -1,0 +1,76 @@
+{{- $prefix := "nuphos-dev" }}
+backend:
+  url: https://{{ $prefix }}-api.{{ .Values.zones.main }}
+
+storage:
+  url: https://{{ $prefix }}-storage.{{ .Values.zones.main }}
+  # Dev data is thrown away on the move to the nuphos namespace, so the default Delete class.
+  persistence:
+    size: 5Gi
+
+runtime:
+  url: https://{{ $prefix }}-runtime.{{ .Values.zones.main }}
+  persistence:
+    home:
+      size: 5Gi
+    workspace:
+      size: 5Gi
+
+mongo:
+  persistence:
+    size: 5Gi
+
+# The sender must be on a domain verified in Resend. The API key is in nuphos-credentials.
+email:
+  provider: resend
+  from: Nuphos <nuphos@{{ .Values.zones.main }}>
+
+# The nuphos-route release attaches it to the shared Gateway instead.
+ingress:
+  enabled: false
+
+# Every credential from 1Password, so diffs stay stable and a replay keeps the same values.
+secrets:
+  existingSecret: nuphos-credentials
+
+extraObjects:
+  - apiVersion: external-secrets.io/v1
+    kind: ExternalSecret
+    metadata:
+      name: nuphos-credentials
+    spec:
+      refreshInterval: 24h
+      secretStoreRef:
+        kind: ClusterSecretStore
+        name: onepassword
+      target:
+        name: nuphos-credentials
+        creationPolicy: Owner
+      data:
+{{- range $key, $item := dict "NUPHOS_JWT_SECRET" "nuphos-jwt_secret" "MONGO_PASSWORD" "nuphos-mongo_password" "STORAGE_SECRET_KEY" "nuphos-storage_secret_key" "RUNTIME_AUTH_KEY" "nuphos-runtime_auth_key" "RUNTIME_TOKEN_ENCRYPTION_KEY" "nuphos-runtime_token_encryption_key" "RESEND_API_KEY" "resend-nuphos_email" }}
+        - secretKey: {{ $key }}
+          remoteRef:
+            key: {{ dig "kubernetes" "name" "" $.Values }}-{{ $item }}/credential
+{{- end }}
+
+# Read by the nuphos-route release, ignored by the chart above.
+# Agent turns stream over WebSockets and file transfers can be long, so no request timeout.
+httpRoutes:
+  api:
+    hostnames:
+      - {{ $prefix }}-api.{{ .Values.zones.main }}
+    service: nuphos-backend
+    port: 3000
+    requestTimeout: 0s
+  storage:
+    hostnames:
+      - {{ $prefix }}-storage.{{ .Values.zones.main }}
+    service: nuphos-rustfs
+    port: 9000
+    requestTimeout: 0s
+  runtime:
+    hostnames:
+      - {{ $prefix }}-runtime.{{ .Values.zones.main }}
+    service: nuphos-runtime
+    port: 8080
+    requestTimeout: 0s
