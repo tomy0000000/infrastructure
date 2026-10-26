@@ -11,6 +11,8 @@ resources:
     cpu: 20m
     memory: 64Mi
 webhook:
+  # DOKS blocks upgrades on webhook timeouts above 29s, and the chart defaults to 30
+  timeoutSeconds: 29
   resources:
     requests:
       cpu: 10m
