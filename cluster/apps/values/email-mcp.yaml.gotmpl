@@ -6,6 +6,10 @@ ingress:
   enabled: false
 
 server:
+  # Returns attachment bytes over MCP, since Claude cannot read files saved on the pod.
+  extraEnv:
+    - name: MCP_EMAIL_SERVER_ENABLE_ATTACHMENT_CONTENT
+      value: "true"
   resources:
     requests:
       cpu: 25m
