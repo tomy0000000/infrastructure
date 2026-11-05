@@ -124,6 +124,8 @@ extraResources:
       jobTemplate:
         spec:
           backoffLimit: 2
+          # A run that cannot schedule fails within the hour, or Forbid would skip every night after it.
+          activeDeadlineSeconds: 3600
           template:
             spec:
               restartPolicy: Never
