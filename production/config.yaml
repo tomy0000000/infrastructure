@@ -34,6 +34,11 @@ buckets:
     name: tomy-backup-remark42
     location: WNAM
     expire_after_days: 30
+  # Nightly mailcow backup_and_restore.sh archives, one folder per run
+  mailcow:
+    name: tomy-backup-mailcow
+    location: WNAM
+    expire_after_days: 30
   # Lumos restic repository
   lumos:
     name: tomy-backup-lumos

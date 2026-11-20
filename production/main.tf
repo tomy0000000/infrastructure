@@ -70,6 +70,15 @@ module "r2_remark42" {
   expire_after_days = local.buckets.remark42.expire_after_days
 }
 
+module "r2_mailcow" {
+  source = "../template/r2"
+
+  account_id        = var.cloudflare_account_id
+  bucket_name       = local.buckets.mailcow.name
+  location          = local.buckets.mailcow.location
+  expire_after_days = local.buckets.mailcow.expire_after_days
+}
+
 module "r2_lumos" {
   source = "../template/r2"
 
