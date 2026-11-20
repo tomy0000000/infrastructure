@@ -34,6 +34,11 @@ buckets:
     name: tomy-backup-remark42
     location: WNAM
     expire_after_days: 30
+  # Lumos restic repository
+  lumos:
+    name: tomy-backup-lumos
+    location: APAC
+    expire_after_days: 30
 
 # DOKS cluster
 kubernetes:
