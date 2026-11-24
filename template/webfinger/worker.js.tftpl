@@ -1,0 +1,12 @@
+export default {
+  fetch(request) {
+    const resource = new URL(request.url).searchParams.get("resource") ?? "";
+    if (request.method !== "GET" || !resource.startsWith("acct:") || !resource.endsWith("@${domain}")) {
+      return new Response("Not Found", { status: 404 });
+    }
+    return Response.json(
+      { subject: resource, links: [{ rel: "http://openid.net/specs/connect/1.0/issuer", href: "${issuer}" }] },
+      { headers: { "content-type": "application/jrd+json" } },
+    );
+  },
+};

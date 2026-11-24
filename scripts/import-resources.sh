@@ -419,6 +419,57 @@ import_mail_dns() {
   done < <(yq -r '.instances // {} | to_entries | .[] | select(.value.mail_domain) | .key + " " + .value.mail_domain + " " + .value.dkim_selector' "$env/config.yaml")
 }
 
+# The routes API has no pattern filter, so the route is matched client side.
+import_webfinger() {
+  local env="$1"
+  local name domain zone_id pattern address resp route_id
+  name=$(yq -r '.webfinger.name // ""' "$env/config.yaml")
+  [[ -z "$name" ]] && return 0
+
+  address="module.webfinger.cloudflare_workers_script.this"
+  if [[ -n $(terraform -chdir="$env" state list "$address" 2>/dev/null) ]]; then
+    echo "$env: worker ${name} already in state"
+  elif terraform -chdir="$env" import -input=false \
+      "$address" "${TF_VAR_cloudflare_account_id}/${name}" > /dev/null 2>&1; then
+    echo "$env: imported worker ${name}"
+  else
+    echo "$env: import of worker ${name} failed, assuming absent, plan will create it"
+  fi
+
+  if [[ -z $(terraform -chdir="$env" state list "module.zone_main.cloudflare_zone.this" 2>/dev/null) ]]; then
+    echo "$env: main zone not in state, plan will create the webfinger route"
+    return 0
+  fi
+  address="module.webfinger.cloudflare_workers_route.this"
+  if [[ -n $(terraform -chdir="$env" state list "$address" 2>/dev/null) ]]; then
+    echo "$env: webfinger route already in state"
+    return 0
+  fi
+  zone_id=$(terraform -chdir="$env" state pull | jq -r 'first(.resources[]
+    | select(.module == "module.zone_main" and .type == "cloudflare_zone")
+    | .instances[0].attributes.id)')
+  domain=$(yq -r '.zones.main' "$env/config.yaml")
+  # template/webfinger builds the same pattern.
+  pattern="${domain}/.well-known/webfinger*"
+  resp=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+    "https://api.cloudflare.com/client/v4/zones/${zone_id}/workers/routes")
+  if [[ $(jq -r '.success' <<<"$resp") != "true" ]]; then
+    echo "$env: route lookup for ${pattern} failed: $(jq -c '.errors' <<<"$resp")" >&2
+    exit 1
+  fi
+  route_id=$(jq -r --arg p "$pattern" 'first(.result[] | select(.pattern == $p) | .id) // empty' <<<"$resp")
+  if [[ -z "$route_id" ]]; then
+    echo "$env: route ${pattern} not found, plan will create it"
+    return 0
+  fi
+  if terraform -chdir="$env" import -input=false \
+      "$address" "${zone_id}/${route_id}" > /dev/null 2>&1; then
+    echo "$env: imported route ${pattern}"
+  else
+    echo "$env: import of route ${pattern} failed"
+  fi
+}
+
 # Skips when already in state or when there is nothing to adopt, and fails hard
 # otherwise, since a stray create here allocates a fresh IPv6 range.
 import_or_die() {
@@ -510,5 +561,6 @@ for env in "${!ENVS[@]}"; do
   step "$env" firewalls
   step "$env" instance_dns
   step "$env" mail_dns
+  step "$env" webfinger
   step "$env" instance_network
 done

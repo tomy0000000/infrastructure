@@ -2,6 +2,11 @@
 zones:
   main: tomy.me
 
+# WebFinger at the main zone apex, pointing OIDC discovery at an authentik application
+webfinger:
+  name: webfinger
+  application: tailscale
+
 # R2 buckets
 buckets:
   img:

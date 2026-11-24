@@ -6,6 +6,9 @@ locals {
   # Cloudflare zones
   zones = local.config.zones
 
+  # WebFinger
+  webfinger = local.config.webfinger
+
   # R2 buckets
   buckets = local.config.buckets
 
@@ -21,6 +24,16 @@ module "zone_main" {
 
   account_id = var.cloudflare_account_id
   domain     = local.zones.main
+}
+
+module "webfinger" {
+  source = "../template/webfinger"
+
+  account_id = var.cloudflare_account_id
+  zone_id    = module.zone_main.zone_id
+  name       = local.webfinger.name
+  domain     = local.zones.main
+  issuer     = "https://auth.${local.zones.main}/application/o/${local.webfinger.application}/"
 }
 
 module "r2_img" {

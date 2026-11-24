@@ -22,6 +22,8 @@ API token the Terraform Cloudflare provider uses.
    - **Account** → **Workers R2 Storage** → **Edit** (R2 buckets)
    - **Zone** → **Zone** → **Edit** (zones)
    - **Zone** → **DNS** → **Edit** (the A and AAAA records fronting each instance)
+   - **Account** → **Workers Scripts** → **Edit** (the WebFinger Worker)
+   - **Zone** → **Workers Routes** → **Edit** (the route sending `/.well-known/webfinger` to it)
 4. Scope it to a specific account under **Account Resources**
 5. **Continue to summary** → **Create Token**
 
