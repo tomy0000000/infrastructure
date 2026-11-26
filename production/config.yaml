@@ -44,9 +44,9 @@ buckets:
     name: tomy-backup-mailcow
     location: WNAM
     expire_after_days: 30
-  # Lumos restic repository
-  lumos:
-    name: tomy-backup-lumos
+  # Nightly NocoDB archives, one file per run
+  nocodb:
+    name: tomy-backup-nocodb
     location: APAC
     expire_after_days: 30
 

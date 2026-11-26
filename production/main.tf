@@ -92,13 +92,13 @@ module "r2_mailcow" {
   expire_after_days = local.buckets.mailcow.expire_after_days
 }
 
-module "r2_lumos" {
+module "r2_nocodb" {
   source = "../template/r2"
 
   account_id        = var.cloudflare_account_id
-  bucket_name       = local.buckets.lumos.name
-  location          = local.buckets.lumos.location
-  expire_after_days = local.buckets.lumos.expire_after_days
+  bucket_name       = local.buckets.nocodb.name
+  location          = local.buckets.nocodb.location
+  expire_after_days = local.buckets.nocodb.expire_after_days
 }
 
 module "doks" {
